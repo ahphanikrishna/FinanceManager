@@ -22,20 +22,78 @@
 <div class="metrics-grid">
     <div class="metric-card income">
         <div class="metric-title">Total Income</div>
-        <div class="metric-value">${{ "%.2f"|format(totals.income|default(0.0)) }}</div>
+        <div class="metric-value">₹{{ "%.2f"|format(totals.income|default(0.0)) }}</div>
     </div>
     <div class="metric-card expense">
         <div class="metric-title">Total Expenses</div>
-        <div class="metric-value">${{ "%.2f"|format(totals.expenses|default(0.0)) }}</div>
+        <div class="metric-value">₹{{ "%.2f"|format(totals.expenses|default(0.0)) }}</div>
     </div>
     <div class="metric-card investment">
         <div class="metric-title">Total Investments</div>
-        <div class="metric-value">${{ "%.2f"|format(totals.investments|default(0.0)) }}</div>
+        <div class="metric-value">₹{{ "%.2f"|format(totals.investments|default(0.0)) }}</div>
     </div>
     <div class="metric-card transfer">
         <div class="metric-title">Total Transfers</div>
-        <div class="metric-value">${{ "%.2f"|format(totals.transfers|default(0.0)) }}</div>
+        <div class="metric-value">₹{{ "%.2f"|format(totals.transfers|default(0.0)) }}</div>
     </div>
+</div>
+
+<div class="card insights-card">
+    <h3>Insights</h3>
+    <p class="insights-summary">{{ insights.summary_text }}</p>
+
+    <div class="insights-grid">
+        <div class="insights-panel">
+            <h4>Top categories</h4>
+            {% for entry in insights.top_categories %}
+            <div class="insight-row">
+                <span class="insight-label">{{ entry.category }}</span>
+                <span class="insight-value">₹{{ "%.2f"|format(entry.total) }}</span>
+            </div>
+            {% else %}
+            <p class="empty-state">No spending categories yet.</p>
+            {% endfor %}
+        </div>
+
+        <div class="insights-panel">
+            <h4>Spend trend ({{ insights.trend|length }} months)</h4>
+            {% for point in insights.trend %}
+            <div class="insight-trend-row">
+                <span class="insight-label">{{ point.month }}</span>
+                <span class="insight-trend-bar" aria-hidden="true">
+                    {% if insights.trend|map(attribute='expenses')|max > 0 %}
+                    <span style="width: {{ (point.expenses / (insights.trend|map(attribute='expenses')|max) * 100)|round|int }}%"></span>
+                    {% endif %}
+                </span>
+                <span class="insight-value">₹{{ "%.2f"|format(point.expenses) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% set mom = insights.month_over_month %}
+    {% if mom.delta_pct is not none %}
+    <p class="insights-mom {% if mom.delta > 0 %}up{% else %}down{% endif %}">
+        {% if mom.delta > 0 %}▲{% else %}▼{% endif %}
+        {% if mom.delta > 0 %}Spending is up{% else %}Spending is down{% endif %} ₹{{ "%.2f"|format(mom.delta) }} ({{ "%.1f"|format(mom.delta_pct|abs) }}%) vs {{ mom.previous_month }}.
+    </p>
+    {% endif %}
+
+    {% if insights.budget.limit %}
+    <div class="budget-meter">
+        <div class="budget-meter-label">
+            <span>Monthly budget</span>
+            <span class="{% if insights.budget.over %}over{% endif %}">
+                ₹{{ "%.2f"|format(insights.budget.used) }} of ₹{{ "%.2f"|format(insights.budget.limit) }}
+                ({{ "%.0f"|format(insights.budget.pct) }}%)
+            </span>
+        </div>
+        <div class="budget-meter-track">
+            <div class="budget-meter-fill {% if insights.budget.over %}over{% endif %}"
+                 style="width: {{ [insights.budget.pct, 100]|min|int }}%"></div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -58,8 +116,8 @@
                 <td>{{ balance.member }}</td>
                 <td>{{ balance.account_name }}</td>
                 <td>{{ balance.account_type }}</td>
-                <td>${{ "%.2f"|format(balance.opening_balance) }}</td>
-                <td>${{ "%.2f"|format(balance.closing_balance) }}</td>
+                <td>₹{{ "%.2f"|format(balance.opening_balance) }}</td>
+                <td>₹{{ "%.2f"|format(balance.closing_balance) }}</td>
             </tr>
             {% else %}
             <tr>

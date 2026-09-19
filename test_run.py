@@ -4,7 +4,7 @@ import unittest
 from run import app
 
 from app.database import Base, engine
-from app.models import Account, Category, Member, Onboarding, User
+from app.models import Account, Category, Member, Onboarding, Transaction, User
 from app.repository import DatabaseRepository
 
 # Mocking the DatabaseRepository and app context is necessary for isolated unit tests.
@@ -34,7 +34,7 @@ def register_test_user(client, prefix="smoke_user"):
 def cleanup_test_user(user_id):
     session = DatabaseRepository().get_session()
     try:
-        for model in (Category, Account, Member, Onboarding):
+        for model in (Transaction, Category, Account, Member, Onboarding):
             for row in session.query(model).filter(model.user_id == user_id).all():
                 session.delete(row)
         user = session.get(User, user_id)
@@ -103,6 +103,71 @@ class TestPageRendering(LoggedInTestCase):
         response = self.client.get("/accounts")
         self.assertEqual(response.status_code, 302)
         self.assertIn("/settings", response.headers.get("Location", ""))
+
+
+class TestInsights(LoggedInTestCase):
+    """Smoke tests for monthly spend insights (service -> API + dashboard)."""
+
+    def _seed(self, day: int, tx_type: str, amount: float, category: str, month_date):
+        session = DatabaseRepository().get_session()
+        try:
+            session.add(Transaction(
+                date=month_date.replace(day=day),
+                member="SMOKE MEMBER",
+                account="Smoke SBI",
+                account_type="Savings",
+                description=f"{category} test entry",
+                type=tx_type,
+                amount=-abs(amount) if tx_type in ("Expenditure", "Investment") else abs(amount),
+                category=category,
+                subcategory=category,
+                fill_type="Manual",
+                comments="",
+                user_id=self.user_id,
+            ))
+            session.commit()
+        finally:
+            session.close()
+
+    def setUp(self):
+        super().setUp()
+        from datetime import date, timedelta
+
+        today = date.today()
+        self.cur_month = today.strftime("%Y-%m")
+        prev_day = today.replace(day=1) - timedelta(days=1)
+        prev2_day = prev_day.replace(day=1) - timedelta(days=1)
+        self.prev_month = prev_day.strftime("%Y-%m")
+
+        self._seed(5, "Expenditure", 100, "Groceries", today)
+        self._seed(6, "Expenditure", 500, "Rent", today)
+        self._seed(1, "Income", 2000, "Salary", today)
+        self._seed(5, "Expenditure", 300, "Food", prev_day)
+        self._seed(5, "Expenditure", 250, "Food", prev2_day)
+
+    def test_summary_api(self):
+        response = self.client.get(f"/api/v1/insights/summary?month={self.cur_month}&user_id={self.user_id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertAlmostEqual(data["totals"]["expenses"], 600.0)
+        self.assertAlmostEqual(data["totals"]["income"], 2000.0)
+        self.assertEqual(data["by_category"][0]["category"], "Rent")
+        self.assertAlmostEqual(data["month_over_month"]["delta_pct"], 100.0)
+        self.assertIn("top category", data["summary_text"])
+
+    def test_trends_api(self):
+        response = self.client.get(f"/api/v1/insights/trends?user_id={self.user_id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(len(data["series"]), 6)
+        total = sum(point["expenses"] for point in data["series"])
+        self.assertAlmostEqual(total, 1150.0)
+
+    def test_dashboard_renders_insights(self):
+        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+        self.assertIn("Insights", body)
+        self.assertIn("top category", body)
+        self.assertIn("Spending is up", body)
 
 
 class TestOnboardingFlow(LoggedInTestCase):

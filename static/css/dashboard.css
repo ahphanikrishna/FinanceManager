@@ -39,3 +39,102 @@
   .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
   .metric-value { font-size: 1.25rem; }
   .dashboard-filter { flex-wrap: wrap; }
+}
+
+.insights-card .insights-summary {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-color);
+  margin: 0.5rem 0 1.25rem;
+}
+
+.insights-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.insights-panel h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-text);
+}
+
+.insight-row,
+.insight-trend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.insight-row:last-child,
+.insight-trend-row:last-child { border-bottom: 0; }
+
+.insight-label { flex: 0 0 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insight-value { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.insight-trend-bar {
+  flex: 1;
+  height: 0.5rem;
+  background: var(--soft-blue);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.insight-trend-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--secondary-color), #60a5fa);
+  border-radius: 999px;
+  min-width: 0.25rem;
+}
+
+.insights-mom {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin: 0.75rem 0;
+}
+
+.insights-mom.up { color: var(--danger-color); }
+.insights-mom.down { color: var(--success-color); }
+
+.budget-meter { margin-top: 1rem; }
+
+.budget-meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted-text);
+  margin-bottom: 0.35rem;
+}
+
+.budget-meter-label .over { color: var(--danger-color); }
+
+.budget-meter-track {
+  height: 0.6rem;
+  background: var(--soft-blue);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.budget-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--success-color), #4ade80);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.budget-meter-fill.over {
+  background: linear-gradient(90deg, var(--danger-color), #f87171);
+}
+
+@media (max-width: 720px) {
+  .insight-label { flex-basis: 6rem; }
+  .insights-grid { gap: 1rem; }
+}

@@ -23,7 +23,7 @@ ACTIVE_ENV = select_environment()
 
 from flask import Flask, render_template
 from flask_login import LoginManager, AnonymousUserMixin
-from api import transactions, categories, accounts, members, users
+from api import transactions, categories, accounts, members, users, insights
 from app.database import Base
 from app.repository import DatabaseRepository, init_db_and_repo
 from app.models import User  # Make sure to import your User model
@@ -54,6 +54,7 @@ app.register_blueprint(categories.categories_bp)
 app.register_blueprint(accounts.accounts_bp)  
 app.register_blueprint(members.members_bp)
 app.register_blueprint(users.users_bp)
+app.register_blueprint(insights.insights_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(home_bp)
 app.register_blueprint(settings_bp)

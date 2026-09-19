@@ -5,7 +5,7 @@ from flask_login import current_user, login_required
 
 from app.models import Balance, Onboarding, Transaction
 from app.repository import DatabaseRepository
-from app.services import onboarding_service
+from app.services import insights_service, onboarding_service
 
 home_bp = Blueprint('home_bp', __name__, url_prefix='/')
 
@@ -55,6 +55,7 @@ def dashboard():
     session = repository.get_session()
     try:
         progress = onboarding_service.get_progress(session, user_id)
+        insights = insights_service.dashboard_payload(session, user_id, selected_month)
     finally:
         session.close()
 
@@ -64,6 +65,7 @@ def dashboard():
         balances=balances,
         selected_month=selected_month,
         setup_complete=onboarding_service.is_complete(progress),
+        insights=insights,
     )
 
 @home_bp.route('/accounts')
