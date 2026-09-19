@@ -465,3 +465,16 @@
 @media (max-width: 520px) {
 	.form-grid { grid-template-columns: 1fr; }
 }
+
+.suggestion-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--secondary-color);
+  min-height: 1em;
+}
+
+.auto-categorize-status {
+  font-size: 0.8rem;
+  color: var(--muted-text);
+  font-weight: 600;
+}

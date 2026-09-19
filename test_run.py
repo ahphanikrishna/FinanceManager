@@ -170,6 +170,91 @@ class TestInsights(LoggedInTestCase):
         self.assertIn("Spending is up", body)
 
 
+class TestCategorization(LoggedInTestCase):
+    """Smoke tests for historical auto-classification of transactions."""
+
+    def _seed_tx(self, day, tx_type, amount, category, subcategory, description):
+        from datetime import date
+
+        session = DatabaseRepository().get_session()
+        today = date.today()
+        try:
+            session.add(Transaction(
+                date=today.replace(day=day),
+                member="SMOKE MEMBER",
+                account="Smoke SBI",
+                account_type="Savings",
+                description=description,
+                type=tx_type,
+                amount=-abs(amount),
+                category=category,
+                subcategory=subcategory,
+                fill_type="Manual",
+                comments="",
+                user_id=self.user_id,
+            ))
+            session.commit()
+        finally:
+            session.close()
+
+    def setUp(self):
+        super().setUp()
+        self._seed_tx(3, "Expenditure", 111, "Groceries", "Online", "BigBasket order")
+        self._seed_tx(4, "Expenditure", 112, "Groceries", "Online", "BigBasket order")
+        self._seed_tx(5, "Expenditure", 113, "Groceries", "Online", "BigBasket order")
+        self._seed_tx(6, "Expenditure", 114, "Groceries", "Online", "BigBasket order")
+        self._seed_tx(10, "Expenditure", 31, "Software", "SaaS", "Office 365 subscription")
+        self._seed_tx(11, "Expenditure", 32, "Software", "SaaS", "Office 365 subscription")
+        self._seed_tx(12, "Expenditure", 33, "Software", "SaaS", "Office 365 subscription")
+        self._seed_tx(14, "Expenditure", 45, "Uncategorized", "Uncategorized", "BigBasket monthly order")
+
+    def test_suggestion_api(self):
+        payload = {
+            "user_id": self.user_id,
+            "description": "BigBasket monthly order",
+            "member": "SMOKE MEMBER",
+            "account": "Smoke SBI",
+            "type": "Expenditure",
+        }
+        response = self.client.post("/api/v1/suggestions/categorize", json=payload)
+        self.assertEqual(response.status_code, 200)
+        top = response.get_json()["suggestions"][0]
+        self.assertEqual(top["category"], "Groceries")
+        self.assertEqual(top["subcategory"], "Online")
+        self.assertEqual(top["support"], 4)
+        self.assertEqual(top["confidence"], 1.0)
+
+    def test_auto_categorize_fills_uncategorized(self):
+        session = DatabaseRepository().get_session()
+        try:
+            pending = session.query(Transaction).filter(
+                Transaction.user_id == self.user_id,
+                Transaction.category == "Uncategorized",
+            ).first()
+            pending_id = pending.id
+        finally:
+            session.close()
+
+        response = self.client.post("/api/v1/suggestions/apply", json={"user_id": self.user_id})
+        self.assertEqual(response.status_code, 200)
+        report = response.get_json()
+        self.assertEqual(report["considered"], 1)
+        self.assertEqual(report["updated"], 1)
+
+        session = DatabaseRepository().get_session()
+        try:
+            updated = session.get(Transaction, pending_id)
+            self.assertEqual(updated.category, "Groceries")
+            self.assertEqual(updated.subcategory, "Online")
+        finally:
+            session.close()
+
+    def test_transactions_page_has_suggestion_ui(self):
+        body = self.client.get("/transactions").get_data(as_text=True)
+        self.assertIn("category-suggestion-hint", body)
+        self.assertIn("Auto-categorize uncategorized", body)
+
+
 class TestOnboardingFlow(LoggedInTestCase):
     """Smoke tests for the first-run onboarding wizard."""
 

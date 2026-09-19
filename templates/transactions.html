@@ -16,6 +16,8 @@
             <label for="transactions-month">Month</label>
             <input id="transactions-month" name="month" type="month" value="{{ selected_month }}">
         </form>
+        <button id="auto-categorize-button" class="btn btn-primary btn-sm" type="button">Auto-categorize uncategorized</button>
+        <span id="auto-categorize-status" class="auto-categorize-status" aria-live="polite"></span>
     </div>
 
     <div class="transaction-tab-panels">
@@ -82,6 +84,7 @@
             <div class="form-group">
                 <label for="manual-description">Description</label>
                 <input id="manual-description" name="description" required>
+                <p class="suggestion-hint" id="category-suggestion-hint" aria-live="polite"></p>
             </div>
             <div class="form-grid">
                 <div class="form-group">
@@ -433,5 +436,101 @@
             });
         });
     });
+
+    // ---- Historical category suggestions (all overridable) ----
+    const suggestionHint = document.getElementById('category-suggestion-hint');
+    const manualDescription = document.getElementById('manual-description');
+    const manualAccount = document.getElementById('manual-account');
+    const manualMember = document.getElementById('manual-member');
+    const manualType = document.getElementById('manual-type');
+    const manualCategory = document.getElementById('manual-category');
+    const manualSubcategory = document.getElementById('manual-subcategory');
+    let suggestionTimer = null;
+
+    function selectedOptionText(select) {
+        const option = select?.options[select.selectedIndex];
+        return option?.text?.trim() || '';
+    }
+
+    async function fetchSuggestions() {
+        const description = manualDescription?.value || '';
+        if (!description.trim() || description.trim().length < 3) {
+            if (suggestionHint) suggestionHint.textContent = '';
+            return;
+        }
+        try {
+            const response = await fetch('/api/v1/suggestions/categorize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: {{ user_id }},
+                    description: description,
+                    member: selectedOptionText(manualMember) || null,
+                    account: selectedOptionText(manualAccount) || null,
+                    type: manualType?.value || null,
+                }),
+            });
+            const data = await response.json();
+            const top = data.suggestions && data.suggestions[0];
+            if (!suggestionHint) return;
+            if (top) {
+                const pct = Math.round((top.confidence || 0) * 100);
+                suggestionHint.textContent = `Suggestion: ${top.category} / ${top.subcategory} (${pct}% confidence from ${top.support} past transactions). You can override.`;
+                const hasCategory = Array.from(manualCategory.options).some((option) => option.value === top.category);
+                if (hasCategory) manualCategory.value = top.category;
+                manualSubcategory.value = top.subcategory;
+            } else {
+                suggestionHint.textContent = 'No matching history yet — pick a category manually.';
+            }
+        } catch (error) {
+            if (suggestionHint) suggestionHint.textContent = '';
+        }
+    }
+
+    function scheduleSuggestions() {
+        clearTimeout(suggestionTimer);
+        suggestionTimer = setTimeout(fetchSuggestions, 350);
+    }
+
+    [manualDescription, manualAccount, manualMember, manualType].forEach((element) => {
+        if (element) element.addEventListener('input', scheduleSuggestions);
+    });
+    [manualAccount, manualMember, manualType].forEach((element) => {
+        if (element) element.addEventListener('change', scheduleSuggestions);
+    });
+
+    const autoCategorizeButton = document.getElementById('auto-categorize-button');
+    const autoCategorizeStatus = document.getElementById('auto-categorize-status');
+
+    autoCategorizeButton?.addEventListener('click', async () => {
+        autoCategorizeStatus.textContent = 'Working…';
+        try {
+            const response = await fetch('/api/v1/suggestions/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: {{ user_id }},
+                    month: monthInput?.value || null,
+                    limit: 200,
+                }),
+            });
+            const report = await response.json();
+            if (report.updated > 0) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('autocat', `${report.updated}/${report.considered}`);
+                window.location.href = url.toString();
+            } else {
+                autoCategorizeStatus.textContent = `No changes: ${report.considered} uncategorized, none confident enough (all remain editable).`;
+            }
+        } catch (error) {
+            autoCategorizeStatus.textContent = 'Could not run auto-categorization right now.';
+        }
+    });
+
+    const autoCatReport = new URLSearchParams(window.location.search).get('autocat');
+    if (autoCatReport && autoCategorizeStatus) {
+        const [updated, considered] = autoCatReport.split('/');
+        autoCategorizeStatus.textContent = `Auto-categorized ${updated} of ${considered} uncategorized transactions. You can still change any of them.`;
+    }
 </script>
 {% endblock %}

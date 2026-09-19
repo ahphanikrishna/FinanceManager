@@ -107,6 +107,7 @@ def transactions_page():
             selected_account=selected_account,
             selected_type=selected_type,
             selected_category=selected_category,
+            user_id=current_user.id,
         )
     finally:
         session.close()
