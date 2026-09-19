@@ -1,0 +1,11 @@
+flask
+flask_sqlalchemy
+pydantic_settings
+passlib
+python-jose
+flask_login
+bcrypt==4.0.1
+pdfplumber
+pandas
+msoffcrypto-tool
+openpyxl

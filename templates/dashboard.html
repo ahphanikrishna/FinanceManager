@@ -1,0 +1,65 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Dashboard - Finance Tracker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
+
+{% block content %}
+<h2>Financial Dashboard</h2>
+
+<form class="dashboard-filter" method="GET" action="{{ url_for('home_bp.dashboard') }}">
+    <label for="dashboard-month">Month</label>
+    <input id="dashboard-month" name="month" type="month" value="{{ selected_month }}">
+    <button class="btn btn-primary" type="submit">View month</button>
+</form>
+
+<div class="metrics-grid">
+    <div class="metric-card income">
+        <div class="metric-title">Total Income</div>
+        <div class="metric-value">${{ "%.2f"|format(totals.income|default(0.0)) }}</div>
+    </div>
+    <div class="metric-card expense">
+        <div class="metric-title">Total Expenses</div>
+        <div class="metric-value">${{ "%.2f"|format(totals.expenses|default(0.0)) }}</div>
+    </div>
+    <div class="metric-card investment">
+        <div class="metric-title">Total Investments</div>
+        <div class="metric-value">${{ "%.2f"|format(totals.investments|default(0.0)) }}</div>
+    </div>
+    <div class="metric-card transfer">
+        <div class="metric-title">Total Transfers</div>
+        <div class="metric-value">${{ "%.2f"|format(totals.transfers|default(0.0)) }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Monthly Balances Overview</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Member</th>
+                <th>Account Name</th>
+                <th>Account Type</th>
+                <th>Opening Balance</th>
+                <th>Closing Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for balance in balances %}
+            <tr>
+                <td>{{ balance.month }}</td>
+                <td>{{ balance.member }}</td>
+                <td>{{ balance.account_name }}</td>
+                <td>{{ balance.account_type }}</td>
+                <td>${{ "%.2f"|format(balance.opening_balance) }}</td>
+                <td>${{ "%.2f"|format(balance.closing_balance) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No balance records found for the current user.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

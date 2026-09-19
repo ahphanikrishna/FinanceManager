@@ -1,0 +1,6 @@
+﻿.auth-container { max-width: 400px; margin: 4rem auto; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.auth-tabs { display: flex; margin-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0; }
+.auth-tab { flex: 1; text-align: center; padding: 0.5rem; cursor: pointer; font-weight: bold; color: #718096; }
+.auth-tab.active { color: #3498db; border-bottom: 2px solid #3498db; }
+.auth-form { display: none; }
+.auth-form.active { display: block; }

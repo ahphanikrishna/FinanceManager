@@ -1,0 +1,46 @@
+id,name,type,user_id
+1,Dining Out,Expenditure,1
+2,Home Needs,Expenditure,1
+3,Shopping,Expenditure,1
+4,Groceries,Expenditure,1
+5,Food,Expenditure,1
+6,Medicines,Expenditure,1
+7,Medical,Expenditure,1
+8,Fruits & Vegetables,Expenditure,1
+10,Fuel,Expenditure,1
+11,Loans,Expenditure,1
+12,Cab,Expenditure,1
+13,OTT,Expenditure,1
+14,Entertainment,Expenditure,1
+15,Ad-Hoc,Expenditure,1
+16,Toys,Expenditure,1
+17,Nomulu & Vratalu,Expenditure,1
+18,Kids,Expenditure,1
+19,Gifts,Expenditure,1
+20,Electronics & Gadgets,Expenditure,1
+21,Travel,Expenditure,1
+22,Clothes & Apparel,Expenditure,1
+23,Communications,Expenditure,1
+24,Bills,Expenditure,1
+26,Repairs,Expenditure,1
+27,ToSis,Expenditure,1
+28,Gold,Investment,1
+29,Insurance,Investment,1
+30,Charity & NGO & Temples,Expenditure,1
+31,Birthdays,Expenditure,1
+32,Education,Expenditure,1
+33,Sports,Expenditure,1
+34,Holidays,Expenditure,1
+35,Salary,Income,1
+36,Other Accounts,Income,1
+37,Credit Interest,Income,1
+38,From Sis,Income,1
+39,Subsidy,Income,1
+40,Tax Returns,Income,1
+41,Mutual Fund,Investment,1
+42,From Others,Transfer,1
+43,To Others,Transfer,1
+44,GST & Other charges,Expenditure,1
+45,Snacks,Expenditure,1
+46,Online Shopping,Expenditure,1
+47,OtherAccounts,Expenditure,1

@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions - Finance Tracker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/transactions.css') }}">{% endblock %}
+
+{% block content %}
+<div class="transactions-shell">
+<div class="transactions-layout">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <nav class="transaction-tabs" role="tablist" aria-label="Transaction sections">
+            <button class="transaction-tab" type="button" role="tab" aria-selected="false" aria-controls="transaction-upload-panel" data-transaction-tab="upload">Upload transactions</button>
+            <button class="transaction-tab active" type="button" role="tab" aria-selected="true" aria-controls="transaction-view-panel" data-transaction-tab="view">View transactions</button>
+        </nav>
+
+        <form class="transaction-month-bar" method="GET" action="{{ url_for('transactions_view.transactions_page') }}">
+            <label for="transactions-month">Month</label>
+            <input id="transactions-month" name="month" type="month" value="{{ selected_month }}">
+        </form>
+    </div>
+
+    <div class="transaction-tab-panels">
+        <section id="transaction-upload-panel" class="transaction-tab-panel" role="tabpanel" hidden data-transaction-panel="upload">
+        <div class="transaction-tools">
+    <section class="card tool-card">
+        <h3>Import statement</h3>
+        <p>Use one of the supplied bank parsers to add a statement file.</p>
+        <form action="{{ url_for('transactions_view.upload_transactions') }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="provider">Statement format</label>
+                <select id="provider" name="provider" required>
+                    <option value="">Select format</option>
+                    <option value="SBI">SBI Excel</option>
+                    <option value="HDFC">HDFC Excel</option>
+                    <option value="AXIS">Axis PDF</option>
+                    <option value="HDFC CC">HDFC credit card PDF</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="upload-account">Account</label>
+                <select id="upload-account" name="account_id" required>
+                    <option value="">Select account</option>
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">{{ account.account_name }} ({{ account.account_type }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="upload-member">Member</label>
+                <select id="upload-member" name="member_id" required>
+                    <option value="">Select member</option>
+                    {% for member in members %}
+                    <option value="{{ member.id }}">{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="statement-password">File password <span class="field-note">optional</span></label>
+                <input id="statement-password" name="password" type="password">
+            </div>
+            <div class="form-group">
+                <label for="statement-file">Statement file</label>
+                <input id="statement-file" name="file" type="file" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Import transactions</button>
+        </form>
+    </section>
+
+    <section class="card tool-card">
+        <h3>Add manually</h3>
+        <p>Create one transaction without importing a statement.</p>
+        <form action="{{ url_for('transactions_view.create_manual_transaction') }}" method="POST">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="manual-date">Date</label>
+                    <input id="manual-date" name="date" type="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="manual-amount">Amount</label>
+                    <input id="manual-amount" name="amount" type="number" min="0" step="0.01" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="manual-description">Description</label>
+                <input id="manual-description" name="description" required>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="manual-type">Type</label>
+                    <select id="manual-type" name="type" required>
+                        <option value="Expenditure">Expenditure</option>
+                        <option value="Income">Income</option>
+                        <option value="Investment">Investment</option>
+                        <option value="Transfer">Transfer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="manual-account">Account</label>
+                    <select id="manual-account" name="account_id" required>
+                        <option value="">Select account</option>
+                        {% for account in accounts %}
+                        <option value="{{ account.id }}">{{ account.account_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="manual-member">Member</label>
+                    <select id="manual-member" name="member_id" required>
+                        <option value="">Select member</option>
+                        {% for member in members %}
+                        <option value="{{ member.id }}">{{ member.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="manual-category">Category</label>
+                <select id="manual-category" name="category">
+                    <option value="Uncategorized">Uncategorized</option>
+                    {% for category in categories %}
+                    <option value="{{ category.Category }}">{{ category.Category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="manual-subcategory">Subcategory</label>
+                <input id="manual-subcategory" name="subcategory" value="Uncategorized">
+            </div>
+            <button class="btn btn-success" type="submit">Add transaction</button>
+        </form>
+    </section>
+        </div>
+        </section>
+
+        <section id="transaction-view-panel" class="transaction-tab-panel active" role="tabpanel" data-transaction-panel="view">
+        <section class="card transaction-list-card">
+    <div class="table-scroll">
+        <table id="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Member</th>
+                    <th>Account</th>
+                    <th>Description / Comments</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Subcategory</th>
+                    <th>Fill type</th>
+                    <th>Amount</th>
+                    <th>Actions</th>
+                </tr>
+                <tr class="table-filter-row">
+                    <td><input type="text" data-column-filter="date" placeholder="Filter date" aria-label="Filter by date"></td>
+                    <td><input type="text" data-column-filter="member" placeholder="Filter member" aria-label="Filter by member"></td>
+                    <td><input type="text" data-column-filter="account" placeholder="Filter account" aria-label="Filter by account"></td>
+                    <td><input type="text" data-column-filter="description" placeholder="Filter description" aria-label="Filter by description"></td>
+                    <td><input type="text" data-column-filter="type" placeholder="Filter type" aria-label="Filter by type"></td>
+                    <td><input type="text" data-column-filter="category" placeholder="Filter category" aria-label="Filter by category"></td>
+                    <td><input type="text" data-column-filter="subcategory" placeholder="Filter sub" aria-label="Filter by subcategory"></td>
+                    <td><input type="text" data-column-filter="fill_type" placeholder="Filter fill" aria-label="Filter by fill type"></td>
+                    <td><input type="text" data-column-filter="amount" placeholder="Filter amount" aria-label="Filter by amount"></td>
+                    <td><button class="btn btn-primary btn-sm filter-clear-button" type="button">Clear</button></td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr data-date="{{ tx.date }}" data-member="{{ tx.member }}" data-account="{{ tx.account }}" data-description="{{ tx.description }} {{ tx.comments }}" data-type="{{ tx.type }}" data-category="{{ tx.category }}" data-subcategory="{{ tx.subcategory }}" data-fill-type="{{ tx.fill_type }}" data-amount="{{ '%.2f'|format(tx.amount) }}">
+                    <td data-label="Date">{{ tx.date }}</td>
+                    <td data-label="Member">{{ tx.member }}</td>
+                    <td data-label="Account">{{ tx.account }}<small>{{ tx.account_type }}</small></td>
+                    <td data-label="Description / Comments">
+                        <div class="description-stack">
+                            <span class="comments-value">{{ tx.comments or '—' }}</span>
+                            <span class="description-text">{{ tx.description }}</span>
+                            <form class="column-form" action="{{ url_for('transactions_view.update_transaction', transaction_id=tx.id) }}" method="POST">
+                                <input type="hidden" name="month" value="{{ selected_month }}">
+                                <input type="text" name="comments" value="{{ tx.comments or '' }}" placeholder="Comment" aria-label="Comments for transaction {{ tx.id }}">
+                            </form>
+                        </div>
+                    </td>
+                    <td data-label="Type">
+                        <span class="type-badge type-{{ tx.type|lower }}">
+                            {% if tx.type == 'Expenditure' %}EXP
+                            {% elif tx.type == 'Income' %}INC
+                            {% elif tx.type == 'Investment' %}INV
+                            {% elif tx.type == 'Transfer' %}TRF
+                            {% else %}{{ tx.type[:3]|upper }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td data-label="Category">
+                        <form class="column-form" action="{{ url_for('transactions_view.update_transaction', transaction_id=tx.id) }}" method="POST">
+                            <input type="hidden" name="month" value="{{ selected_month }}">
+                            <select name="category" data-category-select required>
+                                {% if tx.category not in category_subcategories %}
+                                <option value="{{ tx.category }}" selected>{{ tx.category }}</option>
+                                {% endif %}
+                                {% for category_name in category_subcategories %}
+                                <option value="{{ category_name }}" {% if tx.category == category_name %}selected{% endif %}>{{ category_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td data-label="Subcategory">
+                        <form class="column-form" action="{{ url_for('transactions_view.update_transaction', transaction_id=tx.id) }}" method="POST">
+                            <input type="hidden" name="month" value="{{ selected_month }}">
+                            <select name="subcategory" data-subcategory-select required>
+                                <option value="{{ tx.subcategory }}" selected>{{ tx.subcategory }}</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td data-label="Fill type"><span class="fill-type-badge">{{ tx.fill_type }}</span></td>
+                    <td class="amount" data-label="Amount">₹{{ "%.2f"|format(tx.amount) }}</td>
+                    <td data-label="Actions">
+                        <form class="row-action-form" action="{{ url_for('transactions_view.update_transaction', transaction_id=tx.id) }}" method="POST">
+                            <input type="hidden" name="month" value="{{ selected_month }}">
+                            <input type="hidden" name="category" value="{{ tx.category }}">
+                            <input type="hidden" name="subcategory" value="{{ tx.subcategory }}">
+                            <div class="action-buttons">
+                                <button class="icon-button btn-primary" type="submit" title="Update transaction" aria-label="Update transaction">✎</button>
+                                <button class="icon-button btn-danger" type="button" title="Delete transaction" aria-label="Delete transaction" onclick="this.closest('form').action='{{ url_for('transactions_view.delete_transaction', transaction_id=tx.id) }}'; this.closest('form').submit();">🗑</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="11" class="empty-state">No transactions found for this month.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-pagination">
+        <div class="page-size-selector">
+            <label for="transactions-page-size">Rows per page</label>
+            <select id="transactions-page-size">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+        <div class="pagination-controls">
+            <button id="transactions-prev" class="pagination-button" type="button">Prev</button>
+            <span id="transactions-page-info">Page 1 of 1</span>
+            <button id="transactions-next" class="pagination-button" type="button">Next</button>
+        </div>
+    </div>
+</section>
+        </section>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const categorySubcategories = {{ category_subcategories|tojson }};
+
+    function refreshSubcategories(row) {
+        const categorySelect = row.querySelector('[data-category-select]');
+        const subcategorySelect = row.querySelector('[data-subcategory-select]');
+        if (!categorySelect || !subcategorySelect) {
+            return;
+        }
+
+        const category = categorySelect.value;
+        const current = subcategorySelect.value;
+        const values = categorySubcategories[category] || [];
+        subcategorySelect.innerHTML = '';
+        values.forEach((value) => {
+            const option = new Option(value, value, value === current, value === current);
+            subcategorySelect.add(option);
+        });
+        if (!values.includes(current) && current) {
+            subcategorySelect.add(new Option(current, current, true, true));
+        }
+    }
+
+    const monthInput = document.getElementById('transactions-month');
+    const table = document.getElementById('transactions-table');
+    const rows = Array.from(table?.querySelectorAll('tbody tr') || []);
+    const columnFilters = Array.from(document.querySelectorAll('[data-column-filter]'));
+    const pageSizeSelect = document.getElementById('transactions-page-size');
+    const prevPageButton = document.getElementById('transactions-prev');
+    const nextPageButton = document.getElementById('transactions-next');
+    const pageInfo = document.getElementById('transactions-page-info');
+    let currentPage = 1;
+    let rowsPerPage = Number(pageSizeSelect?.value || 10);
+
+    function normalize(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function getFilteredRows() {
+        const criteria = {};
+        columnFilters.forEach((input) => {
+            const key = input.dataset.columnFilter;
+            const value = normalize(input.value);
+            if (value) {
+                criteria[key] = value;
+            }
+        });
+
+        return rows.filter((row) => {
+            const rowValues = {
+                date: normalize(row.dataset.date),
+                member: normalize(row.dataset.member),
+                account: normalize(row.dataset.account),
+                description: normalize(row.dataset.description),
+                type: normalize(row.dataset.type),
+                category: normalize(row.dataset.category),
+                subcategory: normalize(row.dataset.subcategory),
+                fill_type: normalize(row.dataset.fillType),
+                amount: normalize(row.dataset.amount),
+            };
+
+            return Object.entries(criteria).every(([key, value]) => {
+                const fieldValue = rowValues[key] || '';
+                return fieldValue.includes(value);
+            });
+        });
+    }
+
+    function updatePagination(filteredRows, totalPages) {
+        if (!pageInfo || !prevPageButton || !nextPageButton) {
+            return;
+        }
+
+        if (filteredRows.length === 0) {
+            pageInfo.textContent = 'Page 0 of 0';
+        } else {
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+        }
+
+        prevPageButton.disabled = currentPage <= 1;
+        nextPageButton.disabled = currentPage >= totalPages || filteredRows.length === 0;
+    }
+
+    function renderTable() {
+        if (!table) {
+            return;
+        }
+
+        const filteredRows = getFilteredRows();
+        const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        rows.forEach((row) => {
+            row.style.display = 'none';
+        });
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        filteredRows.slice(startIndex, endIndex).forEach((row) => {
+            row.style.display = '';
+        });
+
+        updatePagination(filteredRows, totalPages);
+    }
+
+    monthInput?.addEventListener('change', () => {
+        if (monthInput.value) {
+            monthInput.closest('form')?.submit();
+        }
+    });
+
+    columnFilters.forEach((input) => {
+        input.addEventListener('input', () => {
+            currentPage = 1;
+            renderTable();
+        });
+        input.addEventListener('change', () => {
+            currentPage = 1;
+            renderTable();
+        });
+    });
+
+    const clearButton = document.querySelector('.filter-clear-button');
+    clearButton?.addEventListener('click', () => {
+        columnFilters.forEach((input) => {
+            input.value = '';
+        });
+        currentPage = 1;
+        renderTable();
+    });
+
+    pageSizeSelect?.addEventListener('change', () => {
+        rowsPerPage = Number(pageSizeSelect.value || 10);
+        currentPage = 1;
+        renderTable();
+    });
+
+    prevPageButton?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage -= 1;
+            renderTable();
+        }
+    });
+
+    nextPageButton?.addEventListener('click', () => {
+        const filteredRows = getFilteredRows();
+        const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+        if (currentPage < totalPages) {
+            currentPage += 1;
+            renderTable();
+        }
+    });
+
+    renderTable();
+
+    document.querySelectorAll('tr[data-date]').forEach((row) => {
+        const categorySelect = row.querySelector('[data-category-select]');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', () => refreshSubcategories(row));
+            refreshSubcategories(row);
+        }
+    });
+
+    document.querySelectorAll('[data-transaction-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const selected = tab.dataset.transactionTab;
+            document.querySelectorAll('[data-transaction-tab]').forEach((item) => {
+                const active = item.dataset.transactionTab === selected;
+                item.classList.toggle('active', active);
+                item.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-transaction-panel]').forEach((panel) => {
+                const active = panel.dataset.transactionPanel === selected;
+                panel.classList.toggle('active', active);
+                panel.hidden = !active;
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+import pdfplumber
+import pandas as pd
+import msoffcrypto
+import io
+import datetime
+import numpy as np
+
+def parse_hdfc_pdf(file_path, password=None):
+    transactions = []
+    try:
+        # Use the password argument here
+        with pdfplumber.open(file_path, password=password) as pdf:
+            for page in pdf.pages:
+                table = page.extract_table()
+                if not table: continue
+                
+                for row in table[1:]:
+                    if not row[0]: continue
+                    
+                    def clean_amt(val):
+                        return float(val.replace(',', '')) if val and val.strip() else 0.0
+
+                    transactions.append({
+                        "date": row[0],
+                        "description": row[1],
+                        "amount": clean_amt(row[4]) - clean_amt(row[3]),
+                        "bank_name": "hdfc"
+                    })
+        return transactions
+    except Exception as e:
+        print(f"Error unlocking PDF: {e}")
+        return None
+    
+def parse_hdfc_excel(file_path, password=None):
+    # Placeholder for Excel parsing logic
+    # Implement Excel parsing with password handling if needed
+    transactions = []
+    try:
+        
+        if password is not None:
+            # Decrypt the Excel file using msoffcrypto
+            decrypted_workbook = io.BytesIO()
+            with open(file_path, 'rb') as file:
+                office_file = msoffcrypto.OfficeFile(file)
+                office_file.load_key(password=password)
+                office_file.decrypt(decrypted_workbook)
+
+            df = pd.read_excel(decrypted_workbook, skiprows=20) 
+        else:
+            df = pd.read_excel(file_path, skiprows=20,)
+        
+        # Find the correct header row and the table data
+
+        df = df.iloc[1:, :].reset_index(drop=True)
+
+        end_index = [i for i, x in enumerate(df.iloc[:,0]) if str(x) == "nan"][0]
+        df = df.iloc[:end_index, :]
+
+        # Clean column names (remove extra spaces)
+        df.columns = [str(c).strip() for c in df.columns]    
+
+        for row in df.itertuples(index=False):
+            if not row[0]: continue
+
+            transactions.append({
+                "date": datetime.datetime.strptime(row[0], "%d/%m/%y"),
+                "description": row[1],
+                "type": "Income" if pd.isna(row[4]) else "Expenditure",
+                "amount": float(row[5]) if pd.isna(row[4]) else -1 * float(row[4]),
+                
+            })
+        
+        return transactions
+    except Exception as e:
+        print(f"Error unlocking Excel: {e}")
+        return None
+
+def clean_amt(val):
+    return float(val.replace(',', '')) if val and val.strip() else 0.0
+
+if __name__ == "__main__":
+    file_path = "C:\\Users\\Phani\\Desktop\\Acct_Statement_XXXXXXXX3954_08022026.xls"
+    password = None  # Replace with actual password
+    data = parse_hdfc_excel(file_path, password=password)

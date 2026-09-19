@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Finance Tracker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">{% endblock %}
+
+{% block content %}
+<div class="settings-header">
+    <div>
+        <p class="eyebrow">Workspace settings</p>
+        <h2>Manage your finance lists</h2>
+        <p>Configure the members, accounts, and categories available when recording transactions.</p>
+    </div>
+</div>
+
+<div class="settings-tabs" role="tablist" aria-label="Settings sections">
+    <button class="settings-tab {% if active_tab == 'members' %}active{% endif %}" id="tab-members" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'members' else 'false' }}" aria-controls="panel-members" data-settings-tab="members">Members</button>
+    <button class="settings-tab {% if active_tab == 'accounts' %}active{% endif %}" id="tab-accounts" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'accounts' else 'false' }}" aria-controls="panel-accounts" data-settings-tab="accounts">Accounts</button>
+    <button class="settings-tab {% if active_tab == 'categories' %}active{% endif %}" id="tab-categories" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'categories' else 'false' }}" aria-controls="panel-categories" data-settings-tab="categories">Categories</button>
+</div>
+
+<div class="settings-panels">
+    <section class="settings-panel {% if active_tab == 'members' %}active{% endif %}" id="panel-members" role="tabpanel" aria-labelledby="tab-members" data-settings-panel="members" {% if active_tab != 'members' %}hidden{% endif %}>
+        <div class="settings-panel-header">
+            <h3>Members</h3>
+            <p>Add the people or households associated with your transactions.</p>
+        </div>
+        <form class="settings-add-form" action="{{ url_for('settings.create_entity', entity='members') }}" method="POST">
+            <div class="form-group">
+                <label for="member-name">Member name</label>
+                <input id="member-name" name="name" placeholder="e.g. Phani" required>
+            </div>
+            <button class="btn btn-success" type="submit">Add member</button>
+        </form>
+        <div class="settings-list">
+            <h4>Existing members</h4>
+            {% for member in members %}
+            <div class="settings-row">
+                <span class="settings-value">{{ member.name }}</span>
+                <form action="{{ url_for('settings.delete_entity', entity='members', entity_id=member.id) }}" method="POST">
+                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <p class="empty-state">No members added yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="settings-panel {% if active_tab == 'accounts' %}active{% endif %}" id="panel-accounts" role="tabpanel" aria-labelledby="tab-accounts" data-settings-panel="accounts" {% if active_tab != 'accounts' %}hidden{% endif %}>
+        <div class="settings-panel-header">
+            <h3>Accounts</h3>
+            <p>Keep your savings, current, credit, and other accounts organized.</p>
+        </div>
+        <form class="settings-add-form settings-add-form-wide" action="{{ url_for('settings.create_entity', entity='accounts') }}" method="POST">
+            <div class="form-group">
+                <label for="account-name">Account name</label>
+                <input id="account-name" name="account_name" placeholder="e.g. SBI Savings" required>
+            </div>
+            <div class="form-group">
+                <label for="account-type">Account type</label>
+                <input id="account-type" name="account_type" placeholder="e.g. Savings" required>
+            </div>
+            <button class="btn btn-success" type="submit">Add account</button>
+        </form>
+        <div class="settings-list">
+            <h4>Existing accounts</h4>
+            {% for account in accounts %}
+            <div class="settings-row">
+                <div class="settings-value">
+                    <strong>{{ account.account_name }}</strong>
+                    <span>{{ account.account_type }}</span>
+                </div>
+                <form action="{{ url_for('settings.delete_entity', entity='accounts', entity_id=account.id) }}" method="POST">
+                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <p class="empty-state">No accounts added yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="settings-panel {% if active_tab == 'categories' %}active{% endif %}" id="panel-categories" role="tabpanel" aria-labelledby="tab-categories" data-settings-panel="categories" {% if active_tab != 'categories' %}hidden{% endif %}>
+        <div class="settings-panel-header">
+            <h3>Categories</h3>
+            <p>Classify income, expenditure, investments, and transfers.</p>
+        </div>
+        <form class="settings-add-form settings-add-form-wide" action="{{ url_for('settings.create_entity', entity='categories') }}" method="POST">
+            <div class="form-group">
+                <label for="category-name">Category</label>
+                <select id="category-name" name="Category" required>
+                    <option value="">Select an existing category</option>
+                    {% for category_option in category_options %}
+                    <option value="{{ category_option.name }}" data-category-type="{{ category_option.type }}" data-category-subcategory="{{ category_option.subcategory }}">{{ category_option.name }}</option>
+                    {% endfor %}
+                    <option value="__new__">Create a new category...</option>
+                </select>
+                <input id="category-new" name="Category_new" placeholder="New category name" hidden>
+            </div>
+            <div class="form-group" id="subcategory-group">
+                <label for="subcategory">Subcategory</label>
+                <input id="subcategory" name="subcategory" value="General" required>
+            </div>
+            <div class="form-group">
+                <label for="category-type">Type</label>
+                <select id="category-type" name="type" required>
+                    <option value="Expenditure">Expenditure</option>
+                    <option value="Income">Income</option>
+                    <option value="Investment">Investment</option>
+                    <option value="Transfer">Transfer</option>
+                </select>
+            </div>
+            <button class="btn btn-success" type="submit">Add category</button>
+        </form>
+        <div class="category-columns">
+            {% for category_type in ['Expenditure', 'Income', 'Investment', 'Transfer'] %}
+            <div class="category-column">
+                <h4>{{ category_type }}</h4>
+                {% for category in categories_by_type[category_type] %}
+                <div class="category-item">
+                    <div class="settings-value">
+                        <strong>{{ category.Category }}</strong>
+                        {% if category_type in ['Expenditure', 'Transfer'] %}
+                        <span>{{ category.subcategory }}</span>
+                        {% endif %}
+                    </div>
+                    <form action="{{ url_for('settings.delete_entity', entity='categories', entity_id=category.id) }}" method="POST">
+                        <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="empty-state">None yet.</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('[data-settings-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const selected = tab.dataset.settingsTab;
+
+            document.querySelectorAll('[data-settings-tab]').forEach((item) => {
+                const active = item.dataset.settingsTab === selected;
+                item.classList.toggle('active', active);
+                item.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+
+            document.querySelectorAll('[data-settings-panel]').forEach((panel) => {
+                const active = panel.dataset.settingsPanel === selected;
+                panel.classList.toggle('active', active);
+                panel.hidden = !active;
+            });
+        });
+    });
+
+    const categorySelect = document.getElementById('category-name');
+    const newCategoryInput = document.getElementById('category-new');
+    const categoryTypeSelect = document.getElementById('category-type');
+    const subcategoryGroup = document.getElementById('subcategory-group');
+    const subcategoryInput = document.getElementById('subcategory');
+    if (categorySelect && newCategoryInput && categoryTypeSelect && subcategoryGroup && subcategoryInput) {
+        const syncCategoryFields = () => {
+            const creatingNewCategory = categorySelect.value === '__new__';
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+
+            newCategoryInput.hidden = !creatingNewCategory;
+            newCategoryInput.required = creatingNewCategory;
+            if (!creatingNewCategory) {
+                newCategoryInput.value = '';
+                if (selectedOption && selectedOption.dataset.categoryType) {
+                    categoryTypeSelect.value = selectedOption.dataset.categoryType;
+                    subcategoryInput.value = selectedOption.dataset.categorySubcategory || selectedOption.value;
+                }
+            }
+
+            const showsSubcategory = categoryTypeSelect.value === 'Expenditure' || categoryTypeSelect.value === 'Transfer';
+            subcategoryGroup.hidden = !showsSubcategory;
+            subcategoryInput.required = showsSubcategory;
+            if (!showsSubcategory) {
+                subcategoryInput.value = creatingNewCategory ? newCategoryInput.value : categorySelect.value;
+            }
+        };
+
+        categorySelect.addEventListener('change', syncCategoryFields);
+        categoryTypeSelect.addEventListener('change', syncCategoryFields);
+        newCategoryInput.addEventListener('input', syncCategoryFields);
+        syncCategoryFields();
+    }
+</script>
+{% endblock %}

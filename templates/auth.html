@@ -1,0 +1,64 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Login / Register - Finance Tracker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-tabs">
+        <div id="tab-login" class="auth-tab active" onclick="switchTab('login')">Login</div>
+        <div id="tab-register" class="auth-tab" onclick="switchTab('register')">Register</div>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" class="auth-form active" action="{{ url_for('auth.login') }}" method="POST">
+        <div class="form-group">
+            <label for="login-username">Username or Email</label>
+            <input type="text" id="login-username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="register-form" class="auth-form" action="{{ url_for('auth.register') }}" method="POST">
+        <div class="form-group">
+            <label for="reg-username">Username</label>
+            <input type="text" id="reg-username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="reg-email">Email Address</label>
+            <input type="email" id="reg-email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-success" style="width: 100%;">Register</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+        
+        if (tab === 'login') {
+            document.getElementById('tab-login').classList.add('active');
+            document.getElementById('login-form').classList.add('active');
+        } else {
+            document.getElementById('tab-register').classList.add('active');
+            document.getElementById('register-form').classList.add('active');
+        }
+    }
+
+    {% if active_tab == 'register' %}
+    switchTab('register');
+    {% endif %}
+</script>
+{% endblock %}

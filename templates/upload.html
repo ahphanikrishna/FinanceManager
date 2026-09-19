@@ -1,0 +1,26 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Upload Transactions - Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 2rem auto;">
+    <h2>Upload Transactions</h2>
+    <p>Upload your CSV file containing transaction data.</p>
+    
+    <form action="{{ url_for('upload_transactions') }}" method="POST" enctype="multipart/form-data">
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file').click();">
+            <span id="file-label">Drag & drop CSV file here or click to browse</span>
+            <input type="file" id="file" name="file" accept=".csv" style="display: none;" required>
+        </div>
+
+        <div class="form-group">
+            <label for="fill_type">Fill Type Override</label>
+            <select id="fill_type" name="fill_type">
+                <option value="Automatic">Automatic</option>
+                <option value="Manual">Manual</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Upload & Import</button>
+    </form>
+</div>
+{% endblock %}
