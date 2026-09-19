@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome Setup - Finance Tracker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/onboarding.css') }}">{% endblock %}
+
+{% block content %}
+<div class="onboarding-shell">
+    <div class="card onboarding-card">
+        {% if completed %}
+            <div class="onboarding-complete">
+                <h2>Setup complete</h2>
+                <p>Your profile, members, accounts, categories, and monthly budget are all set. You're ready to track your finances.</p>
+                <div class="onboarding-complete-actions">
+                    <a class="btn btn-primary" href="{{ url_for('home_bp.dashboard') }}">Go to dashboard</a>
+                    <a class="btn" href="{{ url_for('settings.settings') }}">Open settings</a>
+                </div>
+            </div>
+        {% else %}
+            <h2>Welcome to Balance Management</h2>
+            <p class="onboarding-intro">Let's get you set up. This takes a minute.</p>
+
+            <ol class="onboarding-progress" aria-label="Setup progress">
+                {% for step_number, step_label in steps.items() %}
+                <li class="onboarding-step
+                    {% if step_number < active_step %}done{% endif %}
+                    {% if step_number == active_step %}active{% endif %}">
+                    <span class="onboarding-step-dot">{{ "✓" if step_number < active_step else step_number }}</span>
+                    <span class="onboarding-step-label">{{ step_label }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+
+            {% if active_step == 1 %}
+            <section class="onboarding-step-panel">
+                <h3>Your profile</h3>
+                <p class="onboarding-summary">
+                    Signed in as <strong>{{ current_user.username }}</strong>
+                    ({{ current_user.email }}).
+                </p>
+                <form method="POST" action="{{ url_for('onboarding.advance_step') }}">
+                    <button class="btn btn-primary" type="submit">Continue</button>
+                </form>
+            </section>
+            {% endif %}
+
+            {% if active_step == step_members %}
+            <section class="onboarding-step-panel">
+                <h3>Add your members</h3>
+                <p class="onboarding-hint">Who shares this household's finances? Start with at least one.</p>
+                <ul class="onboarding-list">
+                    {% for member in members %}
+                    <li>{{ member.name }}</li>
+                    {% endfor %}
+                </ul>
+                <form class="onboarding-inline-form" method="POST" action="{{ url_for('onboarding.add_member') }}">
+                    <div class="form-group">
+                        <label for="member-name">Member name</label>
+                        <input id="member-name" name="name" type="text" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Add member</button>
+                </form>
+                <form class="onboarding-next-form" method="POST" action="{{ url_for('onboarding.advance_step') }}">
+                    <button class="btn btn-primary" type="submit">Continue</button>
+                </form>
+            </section>
+            {% endif %}
+
+            {% if active_step == step_accounts %}
+            <section class="onboarding-step-panel">
+                <h3>Add your accounts</h3>
+                <p class="onboarding-hint">Bank accounts, credit cards, investment accounts — anything you track.</p>
+                <ul class="onboarding-list">
+                    {% for account in accounts %}
+                    <li>{{ account.account_name }} <span class="onboarding-muted">({{ account.account_type }})</span></li>
+                    {% endfor %}
+                </ul>
+                <form class="onboarding-inline-form" method="POST" action="{{ url_for('onboarding.add_account') }}">
+                    <div class="form-group">
+                        <label for="account-name">Account name</label>
+                        <input id="account-name" name="account_name" type="text" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="account-type">Account type</label>
+                        <select id="account-type" name="account_type" required>
+                            <option value="Savings">Savings</option>
+                            <option value="Current">Current</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Investment">Investment</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Add account</button>
+                </form>
+                <form class="onboarding-next-form" method="POST" action="{{ url_for('onboarding.advance_step') }}">
+                    <button class="btn btn-primary" type="submit">Continue</button>
+                </form>
+            </section>
+            {% endif %}
+
+            {% if active_step == step_categories %}
+            <section class="onboarding-step-panel">
+                <h3>Add your categories</h3>
+                <p class="onboarding-hint">How do you want to bucket income and spending? Add the essentials now — you can refine later.</p>
+                <ul class="onboarding-list">
+                    {% for category in categories %}
+                    <li>{{ category.Category }} <span class="onboarding-muted">({{ category.type }}{% if category.subcategory %} / {{ category.subcategory }}{% endif %})</span></li>
+                    {% endfor %}
+                </ul>
+                <form class="onboarding-inline-form" method="POST" action="{{ url_for('onboarding.add_category') }}">
+                    <div class="form-group">
+                        <label for="category-name">Category</label>
+                        <input id="category-name" name="Category" type="text" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category-sub">Subcategory <span class="field-note">optional</span></label>
+                        <input id="category-sub" name="subcategory" type="text">
+                    </div>
+                    <div class="form-group">
+                        <label for="category-type">Type</label>
+                        <select id="category-type" name="type" required>
+                            <option value="Expenditure">Expenditure</option>
+                            <option value="Income">Income</option>
+                            <option value="Investment">Investment</option>
+                            <option value="Transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Add category</button>
+                </form>
+                <form class="onboarding-next-form" method="POST" action="{{ url_for('onboarding.advance_step') }}">
+                    <button class="btn btn-primary" type="submit">Continue</button>
+                </form>
+            </section>
+            {% endif %}
+
+            {% if active_step == step_budget %}
+            <section class="onboarding-step-panel">
+                <h3>Monthly budget</h3>
+                <p class="onboarding-hint">Optional. A target monthly spending budget helps the insights dashboard flag when you're over.</p>
+                <form class="onboarding-inline-form" method="POST" action="{{ url_for('onboarding.complete') }}">
+                    <div class="form-group">
+                        <label for="monthly-budget">Monthly budget <span class="field-note">optional</span></label>
+                        <input id="monthly-budget" name="monthly_budget" type="number" min="0" step="0.01">
+                    </div>
+                    <button class="btn btn-success" type="submit">Complete setup</button>
+                </form>
+            </section>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,13 @@
     <button class="btn btn-primary" type="submit">View month</button>
 </form>
 
+{% if not setup_complete %}
+<div class="alert alert-info onboarding-banner">
+    <span>Finish your setup to unlock the full experience.</span>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('onboarding.index') }}">Continue setup</a>
+</div>
+{% endif %}
+
 <div class="metrics-grid">
     <div class="metric-card income">
         <div class="metric-title">Total Income</div>

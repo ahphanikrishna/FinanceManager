@@ -27,6 +27,7 @@ class User(UserMixin, Base):
     members = relationship("Member", back_populates="owner_user")
     accounts = relationship("Account", back_populates="owner_user")
     monthly_balances = relationship("Balance", back_populates="owner_user")
+    onboarding = relationship("Onboarding", back_populates="owner_user", uselist=False)
 
 class Transaction(Base):  # <--- MUST be "Transaction"
     __tablename__ = "transactions"
@@ -114,3 +115,16 @@ class Balance(Base):
     owner_user = relationship("User", back_populates="monthly_balances")
 
     __table_args__ = (UniqueConstraint('month', 'account_name', 'account_type', 'member', 'user_id', name='_month_account_member_uc'),)
+
+# First-run onboarding progress, one row per user.
+class Onboarding(Base):
+    __tablename__ = "onboarding"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    # Number of completed wizard steps (0..5); 5 means every step is done.
+    current_step = Column(Integer, default=0)
+    monthly_budget = Column(Float, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    owner_user = relationship("User", back_populates="onboarding")

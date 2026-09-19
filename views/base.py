@@ -3,8 +3,9 @@ from datetime import date, datetime
 from flask import Blueprint, render_template, request
 from flask_login import current_user, login_required
 
-from app.models import Balance, Transaction
+from app.models import Balance, Onboarding, Transaction
 from app.repository import DatabaseRepository
+from app.services import onboarding_service
 
 home_bp = Blueprint('home_bp', __name__, url_prefix='/')
 
@@ -51,11 +52,18 @@ def dashboard():
         if total_key:
             totals[total_key] += transaction.amount or 0.0
 
+    session = repository.get_session()
+    try:
+        progress = onboarding_service.get_progress(session, user_id)
+    finally:
+        session.close()
+
     return render_template(
         'dashboard.html',
         totals=totals,
         balances=balances,
         selected_month=selected_month,
+        setup_complete=onboarding_service.is_complete(progress),
     )
 
 @home_bp.route('/accounts')

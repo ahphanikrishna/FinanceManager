@@ -57,7 +57,7 @@ def register():
     )
     login_user(user)
     flash("Account created successfully.", "success")
-    return redirect(url_for("home_bp.dashboard"))
+    return redirect(url_for("onboarding.index"))
 
 
 @auth_bp.route("/logout")

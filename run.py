@@ -31,6 +31,7 @@ from views.base import home_bp
 from views.auth_views import auth_bp
 from views.settings_view import settings_bp
 from views.transactions_view import transactions_view_bp
+from views.onboarding_view import onboarding_bp
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Required for sessions
@@ -57,6 +58,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(home_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(transactions_view_bp)
+app.register_blueprint(onboarding_bp)
 
 @app.route('/')
 def index():
