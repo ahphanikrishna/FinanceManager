@@ -4,8 +4,46 @@ import unittest
 from run import app
 
 from app.database import Base, engine
+from app.models import Account, Category, Member, Onboarding, User
+from app.repository import DatabaseRepository
 
 # Mocking the DatabaseRepository and app context is necessary for isolated unit tests.
+
+
+def register_test_user(client, prefix="smoke_user"):
+    """Register a fresh user through the real registration flow."""
+    username = f"{prefix}_{uuid.uuid4().hex[:10]}"
+    response = client.post(
+        "/register",
+        data={
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "SmokeTest123!",
+        },
+    )
+    assert response.status_code == 302, response.get_data(as_text=True)
+    session = DatabaseRepository().get_session()
+    try:
+        user = session.query(User).filter_by(username=username).first()
+    finally:
+        session.close()
+    assert user is not None
+    return username, user.id
+
+
+def cleanup_test_user(user_id):
+    session = DatabaseRepository().get_session()
+    try:
+        for model in (Category, Account, Member, Onboarding):
+            for row in session.query(model).filter(model.user_id == user_id).all():
+                session.delete(row)
+        user = session.get(User, user_id)
+        if user is not None:
+            session.delete(user)
+        session.commit()
+    finally:
+        session.close()
+
 
 class BaseTestCase(unittest.TestCase):
     """Shared harness: make sure the schema exists for the test database."""
@@ -13,6 +51,20 @@ class BaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Base.metadata.create_all(engine)
+
+
+class LoggedInTestCase(BaseTestCase):
+    """Base class for tests that need an authenticated smoke user."""
+
+    def setUp(self):
+        self.app = app
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+        self.username, self.user_id = register_test_user(self.client)
+
+    def tearDown(self):
+        cleanup_test_user(self.user_id)
+        self.app.config['TESTING'] = False
 
 
 class TestRunApp(BaseTestCase):
@@ -38,53 +90,23 @@ class TestRunApp(BaseTestCase):
         self.assertIn('action="/login"', body)
 
 
-class TestOnboardingFlow(BaseTestCase):
-    """Smoke tests for the first-run onboarding wizard."""
+class TestPageRendering(LoggedInTestCase):
+    """Core pages must render for an authenticated user."""
 
-    def setUp(self):
-        self.app = app
-        self.app.config['TESTING'] = True
-        self.client = self.app.test_client()
-        self.username = f"smoke_user_{uuid.uuid4().hex[:10]}"
+    def test_core_pages_render(self):
+        for path in ("/dashboard", "/transactions", "/settings", "/onboarding"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
 
-        response = self.client.post(
-            "/register",
-            data={
-                "username": self.username,
-                "email": f"{self.username}@example.com",
-                "password": "SmokeTest123!",
-            },
-        )
+    def test_accounts_redirects_to_settings(self):
+        response = self.client.get("/accounts")
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/onboarding", response.headers.get("Location", ""))
+        self.assertIn("/settings", response.headers.get("Location", ""))
 
-        from app.models import User
-        from app.repository import DatabaseRepository
 
-        session = DatabaseRepository().get_session()
-        try:
-            self.user = session.query(User).filter_by(username=self.username).first()
-            self.assertIsNotNone(self.user)
-            self.user_id = self.user.id
-        finally:
-            session.close()
-
-    def tearDown(self):
-        from app.models import Account, Category, Member, Onboarding, User
-        from app.repository import DatabaseRepository
-
-        session = DatabaseRepository().get_session()
-        try:
-            for model in (Category, Account, Member, Onboarding):
-                for row in session.query(model).filter(model.user_id == self.user_id).all():
-                    session.delete(row)
-            user = session.get(User, self.user_id)
-            if user is not None:
-                session.delete(user)
-            session.commit()
-        finally:
-            session.close()
-        self.app.config['TESTING'] = False
+class TestOnboardingFlow(LoggedInTestCase):
+    """Smoke tests for the first-run onboarding wizard."""
 
     def test_wizard_happy_path(self):
         body = self.client.get("/onboarding").get_data(as_text=True)

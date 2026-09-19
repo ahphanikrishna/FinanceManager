@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.models import Balance, Onboarding, Transaction
@@ -68,4 +68,5 @@ def dashboard():
 
 @home_bp.route('/accounts')
 def accounts_page():
-    return render_template('manage_entities.html')
+    # The legacy manage-entities page is superseded by the settings tabs.
+    return redirect(url_for('settings.settings', tab='accounts'))

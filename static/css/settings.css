@@ -47,6 +47,11 @@
 
 .settings-panel {
   max-width: 1000px;
+  background: var(--card-bg);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+  padding: 1.5rem;
 }
 
 .settings-panel-header {
@@ -88,7 +93,13 @@
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
-  padding: 0.75rem 0;
+  padding: 0.75rem 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.12s ease;
+}
+
+.settings-row:hover {
+  background: var(--soft-blue);
 }
 
 .settings-value {

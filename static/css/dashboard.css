@@ -20,10 +20,22 @@
 }
 
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.metric-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid var(--primary-color); }
+.metric-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06); border: 1px solid rgba(148, 163, 184, 0.18); border-left: 5px solid var(--primary-color); }
 .metric-card.income { border-left-color: var(--success-color); }
 .metric-card.expense { border-left-color: var(--danger-color); }
 .metric-card.investment { border-left-color: var(--secondary-color); }
 .metric-card.transfer { border-left-color: var(--warning-color); }
-.metric-title { font-size: 0.875rem; color: #718096; text-transform: uppercase; }
-.metric-value { font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem; }
+.metric-title { font-size: 0.8rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; }
+.metric-value { font-size: 1.6rem; font-weight: 800; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+
+.dashboard .card h3 { margin-top: 0; }
+.dashboard table { border-radius: 10px; overflow: hidden; }
+.dashboard th:nth-child(5), .dashboard th:nth-child(6),
+.dashboard td:nth-child(5), .dashboard td:nth-child(6) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .metric-value { font-size: 1.25rem; }
+  .dashboard-filter { flex-wrap: wrap; }

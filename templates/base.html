@@ -9,15 +9,16 @@
 </head>
 <body>
     <header>
-        <h1><a href="/" style="color: white; text-decoration: none;">Balance Management</a></h1>
-        <nav>
+        <h1 class="brand"><a href="/">Balance Management</a></h1>
+        <nav aria-label="Main navigation">
+            {% set current_path = request.path %}
             {% if current_user is defined and current_user.is_authenticated %}
-                <a href="{{ url_for('home_bp.dashboard') }}">Dashboard</a>
-                <a href="/transactions">Transactions</a>
-                <a href="{{ url_for('settings.settings') }}">Settings</a>
-                <a href="/logout">Logout</a>
+                <a href="{{ url_for('home_bp.dashboard') }}" class="nav-link{% if current_path.startswith('/dashboard') or current_path == '/' %} active{% endif %}">Dashboard</a>
+                <a href="/transactions" class="nav-link{% if current_path.startswith('/transactions') %} active{% endif %}">Transactions</a>
+                <a href="{{ url_for('settings.settings') }}" class="nav-link{% if current_path.startswith('/settings') %} active{% endif %}">Settings</a>
+                <a href="/logout" class="nav-link">Logout</a>
             {% else %}
-                <a href="/login">Login / Register</a>
+                <a href="/login" class="nav-link{% if current_path.startswith('/login') or current_path.startswith('/register') %} active{% endif %}">Login / Register</a>
             {% endif %}
         </nav>
     </header>
