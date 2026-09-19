@@ -16,6 +16,7 @@
     <button class="settings-tab {% if active_tab == 'members' %}active{% endif %}" id="tab-members" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'members' else 'false' }}" aria-controls="panel-members" data-settings-tab="members">Members</button>
     <button class="settings-tab {% if active_tab == 'accounts' %}active{% endif %}" id="tab-accounts" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'accounts' else 'false' }}" aria-controls="panel-accounts" data-settings-tab="accounts">Accounts</button>
     <button class="settings-tab {% if active_tab == 'categories' %}active{% endif %}" id="tab-categories" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'categories' else 'false' }}" aria-controls="panel-categories" data-settings-tab="categories">Categories</button>
+    <button class="settings-tab {% if active_tab == 'gmail' %}active{% endif %}" id="tab-gmail" type="button" role="tab" aria-selected="{{ 'true' if active_tab == 'gmail' else 'false' }}" aria-controls="panel-gmail" data-settings-tab="gmail">Gmail Sync</button>
 </div>
 
 <div class="settings-panels">
@@ -134,6 +135,62 @@
             </div>
             {% endfor %}
         </div>
+    </section>
+    <section class="settings-panel {% if active_tab == 'gmail' %}active{% endif %}" id="panel-gmail" role="tabpanel" aria-labelledby="tab-gmail" data-settings-panel="gmail" {% if active_tab != 'gmail' %}hidden{% endif %}>
+        <div class="settings-panel-header">
+            <h3>Gmail Sync</h3>
+            <p>Auto-download bank statements from a linked Google mailbox and import them.</p>
+        </div>
+
+        {% if not gmail.configured %}
+        <p class="alert alert-warning">Gmail is not configured: {{ gmail.reason }}</p>
+        {% endif %}
+
+        <div class="settings-row">
+            <span>Linked mailbox</span>
+            <span>{{ gmail.account_email or '—' }}</span>
+        </div>
+        <div class="settings-row">
+            <span>Last sync</span>
+            <span>{{ gmail.last_sync.strftime('%Y-%m-%d %H:%M') if gmail.last_sync else 'Never' }}</span>
+        </div>
+
+        <form class="form-group" method="POST" action="{{ url_for('settings.save_gmail_address') }}">
+            <label for="gmail-address">Your Gmail address</label>
+            <input id="gmail-address" name="gmail_address" type="email" value="{{ gmail.address or '' }}" placeholder="you@gmail.com">
+            <button class="btn btn-primary" type="submit">Save address</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('settings.test_gmail_email') }}">
+            <button class="btn" type="submit">Send test email</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('settings.fetch_gmail_statements') }}" class="gmail-fetch-form">
+            <div class="form-group">
+                <label for="gmail-month">Statement month</label>
+                <input id="gmail-month" name="month" type="month" value="{{ gmail.month }}">
+            </div>
+            <div class="form-group">
+                <label for="gmail-account">Import into account</label>
+                <select id="gmail-account" name="account_id" required>
+                    <option value="">Select account</option>
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">{{ account.account_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="gmail-member">Member</label>
+                <select id="gmail-member" name="member_id" required>
+                    <option value="">Select member</option>
+                    {% for member in members %}
+                    <option value="{{ member.id }}">{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-primary" type="submit">Download &amp; import statements</button>
+        </form>
+        <p class="field-note">Bank statements must arrive in the linked Google mailbox (forward or CC bank emails there). One click downloads the attachments and imports them via the matching bank parser.</p>
     </section>
 </div>
 {% endblock %}

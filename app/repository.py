@@ -1,4 +1,4 @@
-from app.database import SessionLocal, Base, engine
+from app.database import SessionLocal, Base, engine, ensure_user_columns
 from typing import Any, TypeVar, Type
 
 # Define a type for the session object for clearer function signatures
@@ -21,6 +21,7 @@ class DatabaseRepository:
         """
         print("--- Initializing database schema ---")
         Base.metadata.create_all(self.engine)
+        ensure_user_columns(self.engine)
         print("--- Database schema initialized successfully ---")
 
     def get_session(self) -> Session:

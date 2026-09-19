@@ -12,6 +12,8 @@ class User(UserMixin, Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    gmail_address = Column(String, nullable=True)
+    last_gmail_sync_at = Column(DateTime, nullable=True)
     
     @validates("email")
     def validate_email(self, key, address):

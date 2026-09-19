@@ -3,7 +3,7 @@ import uuid
 import unittest
 from run import app
 
-from app.database import Base, engine
+from app.database import Base, engine, ensure_user_columns
 from app.models import Account, Category, Member, Onboarding, Transaction, User
 from app.repository import DatabaseRepository
 
@@ -51,6 +51,7 @@ class BaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Base.metadata.create_all(engine)
+        ensure_user_columns(engine)
 
 
 class LoggedInTestCase(BaseTestCase):
@@ -253,6 +254,62 @@ class TestCategorization(LoggedInTestCase):
         body = self.client.get("/transactions").get_data(as_text=True)
         self.assertIn("category-suggestion-hint", body)
         self.assertIn("Auto-categorize uncategorized", body)
+
+
+class TestGmailSync(LoggedInTestCase):
+    """Smoke tests for the Gmail sync settings flow (no live credentials)."""
+
+    def setUp(self):
+        super().setUp()
+        session = DatabaseRepository().get_session()
+        try:
+            self.member = Member(name="SMOKE MEMBER", user_id=self.user_id)
+            self.account = Account(account_name="Smoke SBI", account_type="Savings", user_id=self.user_id)
+            session.add(self.member)
+            session.add(self.account)
+            session.commit()
+            self.account_id = self.account.id
+            self.member_id = self.member.id
+        finally:
+            session.close()
+
+    def test_gmail_tab_renders(self):
+        body = self.client.get("/settings?tab=gmail").get_data(as_text=True)
+        self.assertIn("Gmail Sync", body)
+        self.assertIn("not configured", body)
+
+    def test_save_gmail_address(self):
+        address = f"{self.username}@example.com"
+        response = self.client.post("/settings/gmail", data={"gmail_address": address})
+        self.assertEqual(response.status_code, 302)
+        session = DatabaseRepository().get_session()
+        try:
+            user = session.get(User, self.user_id)
+            self.assertEqual(user.gmail_address, address)
+        finally:
+            session.close()
+
+    def test_fetch_without_credentials_reports_not_configured(self):
+        response = self.client.post(
+            "/settings/gmail/fetch",
+            data={
+                "month": "2024-01",
+                "account_id": str(self.account_id),
+                "member_id": str(self.member_id),
+            },
+            follow_redirects=True,
+        )
+        body = response.get_data(as_text=True)
+        self.assertIn("Gmail sync stopped", body)
+        self.assertIn("No Google credentials configured", body)
+
+    def test_guess_parsers_mapping(self):
+        from app.services.statement_import import guess_parsers
+
+        self.assertTrue(any("sbi" in pair[0] for pair in guess_parsers("SBI_Passbook_Jan.xlsx")))
+        self.assertTrue(any("hdfc_cc" in pair[0] for pair in guess_parsers("HDFC_CC_Dec.pdf")))
+        self.assertTrue(guess_parsers("Unknown_Bank_Statement.xlsx"))
+        self.assertEqual(guess_parsers("notes.txt"), [])
 
 
 class TestOnboardingFlow(LoggedInTestCase):

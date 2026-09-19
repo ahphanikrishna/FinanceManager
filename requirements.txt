@@ -9,3 +9,7 @@ pdfplumber
 pandas
 msoffcrypto-tool
 openpyxl
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2

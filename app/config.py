@@ -20,5 +20,7 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = APP_ENV
     DATABASE_URL: str = "sqlite:///./bank_data_dev.db"
+    GOOGLE_SERVICE_ACCOUNT_FILE: str = ""
+    GOOGLE_OAUTH_CLIENT_SECRET_FILE: str = ""
 
 settings = Settings()
