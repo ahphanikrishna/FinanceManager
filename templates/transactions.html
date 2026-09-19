@@ -212,7 +212,7 @@
                         </form>
                     </td>
                     <td data-label="Fill type"><span class="fill-type-badge">{{ tx.fill_type }}</span></td>
-                    <td class="amount" data-label="Amount">₹{{ "%.2f"|format(tx.amount) }}</td>
+                    <td class="amount" data-label="Amount">₹{{ tx.amount|inr }}</td>
                     <td data-label="Actions">
                         <form class="row-action-form" action="{{ url_for('transactions_view.update_transaction', transaction_id=tx.id) }}" method="POST">
                             <input type="hidden" name="month" value="{{ selected_month }}">

@@ -1,6 +1,6 @@
 import os
 import tempfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -21,12 +21,18 @@ PARSER_IMPORTS = {
 }
 
 
+def _default_month():
+    # Start on the previous month: it is the last fully settled period.
+    previous = date.today().replace(day=1) - timedelta(days=1)
+    return previous.strftime("%Y-%m")
+
+
 def _selected_month():
     requested = request.args.get("month", "")
     try:
         return datetime.strptime(requested, "%Y-%m").strftime("%Y-%m")
     except ValueError:
-        return date.today().strftime("%Y-%m")
+        return _default_month()
 
 
 def _month_bounds(month):

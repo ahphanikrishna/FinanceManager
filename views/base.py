@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -18,7 +18,9 @@ def dashboard():
     try:
         selected_month = datetime.strptime(requested_month, '%Y-%m').strftime('%Y-%m')
     except ValueError:
-        selected_month = date.today().strftime('%Y-%m')
+        # Start on the previous month: it is the last fully settled period.
+        previous = date.today().replace(day=1) - timedelta(days=1)
+        selected_month = previous.strftime('%Y-%m')
 
     transactions = [
         transaction

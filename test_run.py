@@ -157,7 +157,7 @@ class TestInsights(LoggedInTestCase):
         self.assertIn("top category", data["summary_text"])
 
     def test_trends_api(self):
-        response = self.client.get(f"/api/v1/insights/trends?user_id={self.user_id}")
+        response = self.client.get(f"/api/v1/insights/trends?user_id={self.user_id}&month={self.cur_month}")
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
         self.assertEqual(len(data["series"]), 6)
@@ -310,6 +310,59 @@ class TestGmailSync(LoggedInTestCase):
         self.assertTrue(any("hdfc_cc" in pair[0] for pair in guess_parsers("HDFC_CC_Dec.pdf")))
         self.assertTrue(guess_parsers("Unknown_Bank_Statement.xlsx"))
         self.assertEqual(guess_parsers("notes.txt"), [])
+
+
+class TestDisplayConventions(LoggedInTestCase):
+    """Amounts render with comma grouping; views start on the previous month."""
+
+    def setUp(self):
+        super().setUp()
+        from datetime import date, timedelta
+
+        today = date.today()
+        self.cur_month = today.strftime("%Y-%m")
+        prev_day = today.replace(day=1) - timedelta(days=1)
+        self.prev_month = prev_day.strftime("%Y-%m")
+
+        session = DatabaseRepository().get_session()
+        try:
+            session.add(Transaction(
+                date=today.replace(day=15),
+                member="SMOKE MEMBER",
+                account="Smoke SBI",
+                account_type="Savings",
+                description="Large transfer display check",
+                type="Expenditure",
+                amount=-1234567.5,
+                category="Transfer",
+                subcategory="Internal",
+                fill_type="Manual",
+                comments="",
+                user_id=self.user_id,
+            ))
+            session.commit()
+        finally:
+            session.close()
+
+    def test_transactions_page_comma_groups_amounts(self):
+        body = self.client.get(f"/transactions?month={self.cur_month}").get_data(as_text=True)
+        self.assertIn("\u20b9-1,234,567.50", body)  # ₹-1,234,567.50
+
+    def test_dashboard_comma_groups_amounts(self):
+        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+        self.assertIn("1,234,567.50", body)
+
+    def test_transactions_defaults_to_previous_month(self):
+        body = self.client.get("/transactions").get_data(as_text=True)
+        self.assertIn(f'value="{self.prev_month}"', body)
+
+    def test_dashboard_defaults_to_previous_month(self):
+        body = self.client.get("/dashboard").get_data(as_text=True)
+        self.assertIn(f'value="{self.prev_month}"', body)
+
+    def test_gmail_fetch_defaults_to_previous_month(self):
+        body = self.client.get("/settings?tab=gmail").get_data(as_text=True)
+        self.assertIn(f'value="{self.prev_month}"', body)
 
 
 class TestOnboardingFlow(LoggedInTestCase):

@@ -4,7 +4,7 @@ The browser flows use the view layer (with session auth); these
 endpoints accept an explicit user_id query parameter for programmatic
 access, matching the current API layer's unauthenticated pattern.
 """
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
@@ -14,12 +14,18 @@ from app.services import insights_service
 insights_bp = Blueprint("insights", __name__, url_prefix="/api/v1/insights")
 
 
+def _default_month():
+    # Start on the previous month: it is the last fully settled period.
+    previous = date.today().replace(day=1) - timedelta(days=1)
+    return previous.strftime("%Y-%m")
+
+
 def _month_from_request():
     month = request.args.get("month", "")
     try:
         return datetime.strptime(month, "%Y-%m").strftime("%Y-%m")
     except ValueError:
-        return datetime.today().strftime("%Y-%m")
+        return _default_month()
 
 
 def _user_id_from_request():

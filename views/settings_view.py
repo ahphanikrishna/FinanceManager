@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -62,6 +62,12 @@ def settings():
         session.close()
 
 
+def _default_month():
+    # Start on the previous month: it is the last fully settled period.
+    previous = date.today().replace(day=1) - timedelta(days=1)
+    return previous.strftime("%Y-%m")
+
+
 def _gmail_state(session):
     configured, reason = gmail_service.is_configured()
     return {
@@ -70,7 +76,7 @@ def _gmail_state(session):
         "account_email": gmail_service.account_email() if configured else None,
         "address": current_user.gmail_address,
         "last_sync": current_user.last_gmail_sync_at,
-        "month": date.today().strftime("%Y-%m"),
+        "month": _default_month(),
     }
 
 

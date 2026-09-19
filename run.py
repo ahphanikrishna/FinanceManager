@@ -37,6 +37,18 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Required for sessions
 app.db_repository = DatabaseRepository()
 
+
+def format_amount(value):
+    """Render a number with comma grouping, e.g. -1234567.5 -> -1,234,567.50."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "0.00"
+    return f"{number:,.2f}"
+
+
+app.jinja_env.filters["inr"] = format_amount
+
 # 1. Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
