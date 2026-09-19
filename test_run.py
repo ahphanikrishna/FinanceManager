@@ -365,6 +365,71 @@ class TestDisplayConventions(LoggedInTestCase):
         self.assertIn(f'value="{self.prev_month}"', body)
 
 
+class TestFinGrid(LoggedInTestCase):
+    """The dashboard 2x2 grid replaces the balances overview."""
+
+    def setUp(self):
+        super().setUp()
+        from datetime import date
+
+        today = date.today()
+        self.cur_month = today.strftime("%Y-%m")
+        day = today.replace(day=15)
+        seed = [
+            ("Expenditure", "Groceries", "Online", "Grocery app order", -250.50),
+            ("Expenditure", "Groceries", "Online", "Second grocery order", -80.25),
+            ("Expenditure", "Groceries", "Fresh", "Market purchase", -120.00),
+            ("Expenditure", "Transport", "Refuel", "Petrol", -450.00),
+            ("Income", "Salary", "Monthly", "Monthly salary", 50000.00),
+            ("Investment", "Mutual Fund", "SIP", "SIP debit", -1500.00),
+            ("Transfer", "Between accounts", "", "To savings", -2000.00),
+        ]
+        session = DatabaseRepository().get_session()
+        try:
+            for tx_type, category, subcategory, description, amount in seed:
+                session.add(Transaction(
+                    date=day,
+                    member="SMOKE MEMBER",
+                    account="Smoke SBI",
+                    account_type="Savings",
+                    description=description,
+                    type=tx_type,
+                    amount=amount,
+                    category=category,
+                    subcategory=subcategory,
+                    fill_type="Manual",
+                    comments="",
+                    user_id=self.user_id,
+                ))
+            session.commit()
+        finally:
+            session.close()
+
+    def test_grid_replaces_balances_overview(self):
+        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+        self.assertNotIn("Monthly Balances Overview", body)
+        for fin_type in ("Expenditure", "Income", "Investment", "Transfer"):
+            self.assertIn(f'data-fin-type="{fin_type}"', body)
+
+    def test_grid_cards_have_selection_controls_and_items(self):
+        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+        self.assertIn('data-fin-action="all"', body)
+        self.assertIn('data-fin-action="none"', body)
+        self.assertIn('class="fin-item-check"', body)
+        self.assertIn('data-subcategory="Online"', body)
+        self.assertIn('value="Groceries|Online"', body)
+        # Item amounts render comma-grouped.
+        self.assertIn("\u20b9250.50", body)
+
+    def test_grid_carries_trend_payload_and_scripts(self):
+        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+        self.assertIn('id="fin-grid-data"', body)
+        self.assertIn('"labels"', body)
+        self.assertIn('"All"', body)
+        self.assertIn('chart.umd', body)
+        self.assertIn('fin-grid.js', body)
+
+
 class TestOnboardingFlow(LoggedInTestCase):
     """Smoke tests for the first-run onboarding wizard."""
 

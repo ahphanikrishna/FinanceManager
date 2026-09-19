@@ -12,6 +12,13 @@ from ..models import Onboarding, Transaction
 
 TREND_MONTHS = 6
 
+FIN_GRID_TYPES = (
+    ("Expenditure", "Expenditure"),
+    ("Income", "Income"),
+    ("Investment", "Investments"),
+    ("Transfer", "Transfers"),
+)
+
 
 def _month_bounds(month: str):
     month_start = datetime.strptime(month, "%Y-%m").date().replace(day=1)
@@ -39,6 +46,111 @@ def _transactions_between(session: Session, user_id, start, end):
         )
         .all()
     )
+
+
+def _trend_labels(end_month: str, months: int = TREND_MONTHS) -> list:
+    """Month strings (YYYY-MM), oldest first, ending at end_month."""
+    labels = []
+    current = end_month
+    for _ in range(months):
+        labels.insert(0, current)
+        current = previous_month(current)
+    return labels
+
+
+def financial_grid_payload(session: Session, user_id, month: str) -> dict:
+    """Payload for the dashboard 2x2 financial grid.
+
+    For each transaction type the payload carries the selected month's line
+    items, the categories/subcategories present in that month, and a
+    ``TREND_MONTHS``-month total series keyed by ``"All"``,
+    ``"<Category>"`` and ``"<Category>|<Subcategory>"``.
+    """
+    user_id = int(user_id)
+    start, end = _month_bounds(month)
+    labels = _trend_labels(month)
+    window_start = date(int(labels[0][:4]), int(labels[0][5:7]), 1)
+    transactions = _transactions_between(session, user_id, window_start, end)
+
+    type_key_by_name = {name.strip().lower(): key for key, name in FIN_GRID_TYPES}
+    bucket_totals = {}
+    items_by_type = {key: [] for key, _ in FIN_GRID_TYPES}
+
+    for tx in transactions:
+        type_key = type_key_by_name.get((tx.type or "").strip().lower())
+        if not type_key or not tx.date:
+            continue
+        category = (tx.category or "").strip() or "Uncategorized"
+        subcategory = (tx.subcategory or "").strip()
+        amount = abs(tx.amount or 0.0)
+        month_str = tx.date.strftime("%Y-%m")
+        bucket_totals[(type_key, category, subcategory, month_str)] = (
+            bucket_totals.get((type_key, category, subcategory, month_str), 0.0) + amount
+        )
+        if month_str == month:
+            items_by_type[type_key].append({
+                "id": tx.id,
+                "date": tx.date.isoformat(),
+                "description": tx.description or "",
+                "category": category,
+                "subcategory": subcategory,
+                "amount": round(amount, 2),
+            })
+
+    cards = []
+    for type_key, label in FIN_GRID_TYPES:
+        category_totals = {}
+        category_subs = {}
+        for (t, category, subcategory, month_str), total in bucket_totals.items():
+            if t != type_key or month_str != month:
+                continue
+            category_totals[category] = category_totals.get(category, 0.0) + total
+            category_subs.setdefault(category, {})
+            category_subs[category][subcategory] = (
+                category_subs[category].get(subcategory, 0.0) + total
+            )
+
+        categories = []
+        for category in sorted(category_totals, key=lambda name: -category_totals[name]):
+            sub_totals = category_subs.get(category, {})
+            categories.append({
+                "name": category,
+                "subcategories": [
+                    {"name": name, "total": round(total, 2)}
+                    for name, total in sorted(sub_totals.items(), key=lambda item: -item[1])
+                ],
+            })
+
+        def series_for(category=None, subcategory=None):
+            series = []
+            for label_month in labels:
+                total = 0.0
+                for (t, category_key, sub_key, month_str), value in bucket_totals.items():
+                    if t != type_key or month_str != label_month:
+                        continue
+                    if category is not None and category_key != category:
+                        continue
+                    if subcategory is not None and sub_key != subcategory:
+                        continue
+                    total += value
+                series.append(round(total, 2))
+            return series
+
+        trend = {"All": series_for()}
+        for category in category_totals:
+            trend[category] = series_for(category=category)
+            for subcategory in category_subs.get(category, {}):
+                trend[f"{category}|{subcategory}"] = series_for(category=category, subcategory=subcategory)
+
+        cards.append({
+            "type": type_key,
+            "label": label,
+            "items": items_by_type[type_key],
+            "categories": categories,
+            "trend": trend,
+        })
+
+    return {"month": month, "labels": labels, "cards": cards}
 
 
 def _month_totals(transactions) -> dict:

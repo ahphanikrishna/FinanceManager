@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.models import Balance, Onboarding, Transaction
+from app.models import Onboarding, Transaction
 from app.repository import DatabaseRepository
 from app.services import insights_service, onboarding_service
 
@@ -29,12 +29,6 @@ def dashboard():
         and transaction.date
         and transaction.date.strftime('%Y-%m') == selected_month
     ]
-    balances = [
-        balance
-        for balance in repository.get_all(Balance)
-        if str(balance.user_id) == user_id
-        and str(balance.month).startswith(selected_month)
-    ]
 
     totals = {
         'income': 0.0,
@@ -58,16 +52,17 @@ def dashboard():
     try:
         progress = onboarding_service.get_progress(session, user_id)
         insights = insights_service.dashboard_payload(session, user_id, selected_month)
+        fin_grid = insights_service.financial_grid_payload(session, user_id, selected_month)
     finally:
         session.close()
 
     return render_template(
         'dashboard.html',
         totals=totals,
-        balances=balances,
         selected_month=selected_month,
         setup_complete=onboarding_service.is_complete(progress),
         insights=insights,
+        fin_grid=fin_grid,
     )
 
 @home_bp.route('/accounts')

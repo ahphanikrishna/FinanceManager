@@ -96,35 +96,69 @@
     {% endif %}
 </div>
 
-<div class="card">
-    <h3>Monthly Balances Overview</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Month</th>
-                <th>Member</th>
-                <th>Account Name</th>
-                <th>Account Type</th>
-                <th>Opening Balance</th>
-                <th>Closing Balance</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for balance in balances %}
-            <tr>
-                <td>{{ balance.month }}</td>
-                <td>{{ balance.member }}</td>
-                <td>{{ balance.account_name }}</td>
-                <td>{{ balance.account_type }}</td>
-                <td>₹{{ balance.opening_balance|inr }}</td>
-                <td>₹{{ balance.closing_balance|inr }}</td>
-            </tr>
+<div class="fin-grid" role="group" aria-label="Monthly financial breakdown">
+    {% for card in fin_grid.cards %}
+    <section class="card fin-card" data-fin-type="{{ card.type }}" aria-label="{{ card.label }} card">
+        <div class="fin-card-header">
+            <h3>{{ card.label }}</h3>
+            <select class="fin-category-select" aria-label="Filter {{ card.label }} by category">
+                <option value="">All categories</option>
+                {% for category in card.categories %}
+                <optgroup label="{{ category.name }}">
+                    <option value="{{ category.name }}">All — {{ category.name }}</option>
+                    {% for sub in category.subcategories %}
+                    <option value="{{ category.name }}|{{ sub.name }}">{{ sub.name }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="fin-card-total">
+            <span class="fin-total-label">Selected total</span>
+            <span class="fin-total-value" data-fin-total>₹0.00</span>
+            <span class="fin-total-count" data-fin-count></span>
+        </div>
+
+        <div class="fin-card-actions">
+            <button type="button" class="btn btn-sm" data-fin-action="all">Select All</button>
+            <button type="button" class="btn btn-sm" data-fin-action="none">Select None</button>
+        </div>
+
+        <ul class="fin-items">
+            {% for item in card["items"] %}
+            <li class="fin-item"
+                data-category="{{ item.category }}"
+                data-subcategory="{{ item.subcategory }}"
+                data-amount="{{ '%.2f'|format(item.amount) }}">
+                <label class="fin-item-label">
+                    <input type="checkbox" class="fin-item-check" checked>
+                    <span class="fin-item-main">
+                        <span class="fin-item-desc">{{ item.description }}</span>
+                        <span class="fin-item-meta">{{ item.date }}{% if item.subcategory %} · {{ item.subcategory }}{% endif %}</span>
+                    </span>
+                    <span class="fin-item-amount">₹{{ item.amount|inr }}</span>
+                </label>
+            </li>
             {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center;">No balance records found for the current user.</td>
-            </tr>
+            <li class="fin-empty empty-state">No {{ card.label|lower }} items in {{ selected_month }} yet.</li>
             {% endfor %}
-        </tbody>
-    </table>
+        </ul>
+
+        <div class="fin-trend-wrap">
+            <h4>Category trend ({{ fin_grid.labels|length }} months)</h4>
+            <div class="fin-trend-canvas-holder">
+                <canvas class="fin-trend"></canvas>
+            </div>
+        </div>
+    </section>
+    {% endfor %}
 </div>
+
+<script id="fin-grid-data" type="application/json">{{ fin_grid | tojson }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/fin-grid.js') }}"></script>
 {% endblock %}
