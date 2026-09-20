@@ -111,6 +111,25 @@ def send_email(to_email, subject, body):
     message["To"] = to_email
     message["Subject"] = subject
     message.set_content(body)
+    _send_raw(service, message)
+
+
+def send_email_with_attachment(to_email, subject, body, filename, content, content_type="application/json"):
+    """Send an email with one attachment (used for data backups)."""
+    from email.message import EmailMessage
+
+    maintype, subtype = (content_type.split("/", 1) + ["octet-stream"])[:2]
+    service = _get_service()
+    message = EmailMessage()
+    message["From"] = account_email()
+    message["To"] = to_email
+    message["Subject"] = subject
+    message.set_content(body)
+    message.add_attachment(content, maintype=maintype, subtype=subtype, filename=filename)
+    _send_raw(service, message)
+
+
+def _send_raw(service, message):
     payload = {"raw": base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")}
     service.users().messages().send(userId="me", body=payload).execute()
 
@@ -145,13 +164,13 @@ def _parse_mime_message(raw):
     return email.parser.Parser().parsebytes(payload)
 
 
-def _extract_attachments(message):
-    """Yield (filename, bytes) for statement-looking attachments in one email."""
+def _extract_attachments(message, extensions=STATEMENT_EXTENSIONS):
+    """Yield (filename, bytes) for attachments matching the given extensions."""
     for part in message.walk():
         if part.get_content_maintype() == "multipart":
             continue
         filename = part.get_filename()
-        if not filename or not filename.lower().endswith(STATEMENT_EXTENSIONS):
+        if not filename or not filename.lower().endswith(extensions):
             continue
         payload = part.get_payload(decode=True)
         if payload:
@@ -221,4 +240,48 @@ def run_sync(user_id, year_month):
     result = download_statements(year_month, user_id)
     result["ok"] = True
     result["reason"] = reason
+    return result
+
+
+def _backups_query(days_back):
+    return f'in:all newer_than:{days_back}d has:attachment subject:"Finance Tracker backup"'
+
+
+def download_backups(user_id, days_back=60, limit=5):
+    """Find Finance Tracker backup emails and save the newest attachment.
+
+    Gmail lists messages newest-first, so files[0] is the latest backup.
+    Returns {"files": [absolute paths], "count": int, "error": optional}.
+    """
+    result = {"files": [], "count": 0}
+    out_dir = os.path.join(DOWNLOAD_ROOT, str(user_id))
+    os.makedirs(out_dir, exist_ok=True)
+
+    service = _get_service()
+    try:
+        listing = service.users().messages().list(
+            userId="me", q=_backups_query(days_back), maxResults=limit
+        ).execute()
+    except Exception as error:  # network/API failures are reported, not raised
+        result["error"] = str(error)
+        return result
+
+    for item in listing.get("messages", []):
+        message_id = item["id"]
+        try:
+            full = service.users().messages().get(
+                userId="me", id=message_id, format="raw"
+            ).execute()
+            message = _parse_mime_message(full["raw"])
+        except Exception:
+            continue
+        for filename, payload in _extract_attachments(message, (".json",)):
+            target = os.path.join(out_dir, os.path.basename(filename))
+            with open(target, "wb") as handle:
+                handle.write(payload)
+            result["files"].append(target)
+            result["count"] += 1
+            break
+        if result["count"]:
+            break
     return result

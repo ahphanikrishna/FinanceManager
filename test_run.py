@@ -651,5 +651,108 @@ class TestOnboardingFlow(LoggedInTestCase):
         self.assertNotIn("Continue setup", body)
 
 
+class TestBackupRestore(LoggedInTestCase):
+    def _seed(self, session):
+        from datetime import date
+
+        session.add(Member(name="PHANI", user_id=self.user_id))
+        session.add(Account(account_name="SBI", account_type="Savings", user_id=self.user_id))
+        session.add(
+            Category(
+                Category="Groceries", subcategory="Online", type="Expenditure", user_id=self.user_id
+            )
+        )
+        session.add(
+            Transaction(
+                date=date(2026, 8, 15),
+                member="PHANI",
+                account="SBI",
+                account_type="Savings",
+                description="Petrol",
+                type="Expenditure",
+                amount=-450.0,
+                category="Transport",
+                subcategory="Refuel",
+                fill_type="Manual",
+                comments="highway fill",
+                user_id=self.user_id,
+            )
+        )
+        session.commit()
+
+    def test_backup_roundtrip_restores_data(self):
+        from app.services import backup_service
+
+        session = DatabaseRepository().get_session()
+        try:
+            self._seed(session)
+            payload = backup_service.export_backup(session, self.user_id)
+        finally:
+            session.close()
+
+        # Simulate a fresh device: wipe all data rows, then restore from the snapshot.
+        session = DatabaseRepository().get_session()
+        try:
+            session.query(Transaction).filter_by(user_id=self.user_id).delete()
+            session.query(Category).filter_by(user_id=self.user_id).delete()
+            session.query(Account).filter_by(user_id=self.user_id).delete()
+            session.query(Member).filter_by(user_id=self.user_id).delete()
+            session.flush()
+            counts = backup_service.import_backup(session, self.user_id, payload)
+            session.commit()
+        finally:
+            session.close()
+
+        self.assertEqual(counts["transactions"], 1)
+        session = DatabaseRepository().get_session()
+        try:
+            tx = session.query(Transaction).filter_by(user_id=self.user_id).first()
+            self.assertEqual(tx.description, "Petrol")
+            self.assertEqual(tx.amount, -450.0)
+            self.assertEqual(tx.date.isoformat(), "2026-08-15")
+            self.assertEqual(tx.comments, "highway fill")
+            self.assertEqual(session.query(Member).filter_by(user_id=self.user_id).count(), 1)
+            self.assertEqual(session.query(Account).filter_by(user_id=self.user_id).count(), 1)
+            self.assertEqual(session.query(Category).filter_by(user_id=self.user_id).count(), 1)
+        finally:
+            session.close()
+
+    def test_rejects_invalid_backup_payload(self):
+        from app.services import backup_service
+
+        session = DatabaseRepository().get_session()
+        try:
+            with self.assertRaises(ValueError):
+                backup_service.import_backup(session, self.user_id, {"schema_version": 999})
+        finally:
+            session.close()
+
+    def test_settings_gmail_tab_has_backup_and_restore(self):
+        body = self.client.get("/settings?tab=gmail").get_data(as_text=True)
+        self.assertIn('action="/settings/backup"', body)
+        self.assertIn('action="/settings/restore"', body)
+        self.assertIn("Back up my data to Gmail", body)
+        self.assertIn("Restore latest backup from Gmail", body)
+
+    def test_backup_requires_gmail_address(self):
+        response = self.client.post("/settings/backup", follow_redirects=True)
+        self.assertIn("Save your Gmail address", response.get_data(as_text=True))
+
+    def test_backup_reports_unconfigured_gmail(self):
+        session = DatabaseRepository().get_session()
+        try:
+            user = session.get(User, self.user_id)
+            user.gmail_address = "smoke-backup@example.com"
+            session.commit()
+        finally:
+            session.close()
+        response = self.client.post("/settings/backup", follow_redirects=True)
+        self.assertIn("Backup not sent", response.get_data(as_text=True))
+
+    def test_restore_reports_unconfigured_gmail(self):
+        response = self.client.post("/settings/restore", follow_redirects=True)
+        self.assertIn("Restore not possible", response.get_data(as_text=True))
+
+
 if __name__ == '__main__':
     unittest.main()

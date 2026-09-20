@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -6,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.models import Account, Category, Member, User
 from app.repository import DatabaseRepository
-from app.services import gmail_service, statement_import
+from app.services import backup_service, gmail_service, statement_import
 
 
 settings_bp = Blueprint("settings", __name__)
@@ -127,6 +128,94 @@ def save_gmail_address():
     except SQLAlchemyError:
         session.rollback()
         flash("Could not save the Gmail address.", "error")
+    finally:
+        session.close()
+    return redirect(url_for("settings.settings", tab="gmail"))
+
+
+@settings_bp.route("/settings/backup", methods=["POST"])
+@login_required
+def backup_to_gmail():
+    """Email the user's full data snapshot to their own Gmail address."""
+    address = current_user.gmail_address
+    if not address:
+        flash("Save your Gmail address above before backing up.", "error")
+        return redirect(url_for("settings.settings", tab="gmail"))
+    configured, reason = gmail_service.is_configured()
+    if not configured:
+        flash(f"Backup not sent: {reason}", "error")
+        return redirect(url_for("settings.settings", tab="gmail"))
+
+    session = DatabaseRepository().get_session()
+    try:
+        payload = backup_service.export_backup(session, current_user.id)
+        content = json.dumps(payload, indent=2).encode("utf-8")
+        filename = f"finance-tracker-backup-{datetime.now():%Y%m%d-%H%M%S}.json"
+        subject = f"{backup_service.BACKUP_SUBJECT_PREFIX} - {date.today().isoformat()}"
+        body = (
+            "This is your Finance Tracker backup. Keep this email: on any other "
+            "device use Settings > Gmail Sync > Restore latest backup to bring "
+            "this data with you."
+        )
+        gmail_service.send_email_with_attachment(
+            address, subject, body, filename, content
+        )
+        flash(
+            "Backup emailed to "
+            f"{address} ({len(payload['transactions'])} transactions, "
+            f"{len(payload['categories'])} categories, "
+            f"{len(payload['accounts'])} accounts, "
+            f"{len(payload['members'])} members).",
+            "success",
+        )
+    except Exception as error:  # Gmail/network failures are reported, not raised
+        session.rollback()
+        flash(f"Backup email failed: {error}", "error")
+    finally:
+        session.close()
+    return redirect(url_for("settings.settings", tab="gmail"))
+
+
+@settings_bp.route("/settings/restore", methods=["POST"])
+@login_required
+def restore_from_gmail():
+    """Fetch the newest backup email and replace this device's data with it."""
+    configured, reason = gmail_service.is_configured()
+    if not configured:
+        flash(f"Restore not possible: {reason}", "error")
+        return redirect(url_for("settings.settings", tab="gmail"))
+
+    try:
+        backups = gmail_service.download_backups(current_user.id)
+    except Exception as error:
+        flash(f"Could not reach Gmail: {error}", "error")
+        return redirect(url_for("settings.settings", tab="gmail"))
+    if not backups.get("files"):
+        flash(
+            "No Finance Tracker backup emails found in your mailbox (last 60 days). "
+            "Send a backup from another device first."
+        )
+        return redirect(url_for("settings.settings", tab="gmail"))
+
+    backup_path = backups["files"][0]
+    session = DatabaseRepository().get_session()
+    try:
+        with open(backup_path, "rb") as handle:
+            payload = json.loads(handle.read().decode("utf-8"))
+        counts = backup_service.import_backup(session, current_user.id, payload)
+        session.commit()
+        flash(
+            f"Backup restored: {counts['transactions']} transactions, "
+            f"{counts['categories']} categories, {counts['accounts']} accounts, "
+            f"{counts['members']} members. Previous data on this device was replaced.",
+            "success",
+        )
+    except (ValueError, json.JSONDecodeError) as error:
+        session.rollback()
+        flash(f"That backup file could not be imported: {error}", "error")
+    except SQLAlchemyError:
+        session.rollback()
+        flash("Restore failed while saving data.", "error")
     finally:
         session.close()
     return redirect(url_for("settings.settings", tab="gmail"))

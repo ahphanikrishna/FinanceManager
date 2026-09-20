@@ -210,6 +210,17 @@
             <button class="btn btn-primary" type="submit">Download &amp; import statements</button>
         </form>
         <p class="field-note">Bank statements must arrive in the linked Google mailbox (forward or CC bank emails there). One click downloads the attachments and imports them via the matching bank parser.</p>
+
+        <div class="settings-list">
+            <h4>Back up &amp; restore your data</h4>
+            <p class="field-note">Your data lives on this device. Back it up to your own Gmail address to carry it to any other device: send a backup here, then on the new device use Restore (it replaces the data currently on that device).</p>
+            <form method="POST" action="{{ url_for('settings.backup_to_gmail') }}">
+                <button class="btn btn-primary" type="submit">Back up my data to Gmail</button>
+            </form>
+            <form method="POST" action="{{ url_for('settings.restore_from_gmail') }}">
+                <button class="btn" type="submit">Restore latest backup from Gmail</button>
+            </form>
+        </div>
     </section>
 </div>
 {% endblock %}
