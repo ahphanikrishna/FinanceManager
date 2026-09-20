@@ -117,6 +117,7 @@
             {% for group in card["groups"] %}
             <li class="fin-group">
                 <div class="fin-group-header">
+                    <button type="button" class="fin-collapse-toggle" aria-expanded="true" title="Collapse category"></button>
                     <label class="fin-group-check">
                         <input type="checkbox" class="fin-group-toggle" checked>
                         <span class="fin-badge" style="background: {{ group.badge.bg }}; color: {{ group.badge.fg }};">{{ group.name }}</span>

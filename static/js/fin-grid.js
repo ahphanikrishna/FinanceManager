@@ -15,11 +15,12 @@
     return;
   }
 
+  // Same palette as the top dashboard metric cards.
   var COLORS = {
-    Expenditure: '#ef4444',
-    Income: '#22c55e',
-    Investment: '#3b82f6',
-    Transfer: '#f59e0b'
+    Expenditure: '#e02424',
+    Income: '#10b981',
+    Investment: '#3498db',
+    Transfer: '#2980b9'
   };
 
   function formatMoney(value) {
@@ -143,6 +144,15 @@
         var checked = button.getAttribute('data-fin-action') === 'all';
         setChecked(card, '.fin-item-check', checked);
         recalc();
+      });
+    });
+
+    forEachIn(card, '.fin-collapse-toggle', function (button) {
+      button.addEventListener('click', function () {
+        var group = button.closest('.fin-group');
+        var collapsed = group.classList.toggle('collapsed');
+        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        button.title = collapsed ? 'Expand category' : 'Collapse category';
       });
     });
 

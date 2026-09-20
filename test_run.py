@@ -441,8 +441,15 @@ class TestFinGrid(LoggedInTestCase):
             self.assertIn(f'data-fin-type="{fin_type}"', body)
         # Grouped category -> subcategory hierarchy with badges and progress bars.
         for marker in ("fin-groups", "fin-group-toggle", "fin-subs", "fin-sub-toggle",
-                       "fin-badge", "fin-group-bar", 'data-fin-action="all"', 'data-fin-action="none"'):
+                       "fin-badge", "fin-group-bar", "fin-collapse-toggle",
+                       'data-fin-action="all"', 'data-fin-action="none"'):
             self.assertIn(marker, body)
+        # One collapse toggle per category group.
+        exp = self._card_html(body, "Expenditure")
+        self.assertEqual(
+            exp.count('class="fin-collapse-toggle"'),
+            exp.count('class="fin-group"'),
+        )
         # Subcategory with an empty name (Fixed Deposit) still renders its items.
         fd_card = self._card_html(body, "Investment")
         self.assertIn("Fixed Deposit", fd_card)
