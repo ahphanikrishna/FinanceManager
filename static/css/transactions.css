@@ -196,9 +196,9 @@
 .section-heading { align-items: baseline; display: flex; justify-content: space-between; }
 .section-heading h3 { margin-top: 0; }
 .section-heading p { color: var(--muted-text); }
-.table-scroll { overflow-x: auto; width: 100%; }
+.table-scroll { overflow: visible; width: 100%; }
 #transactions-table {
-	min-width: 1500px;
+	min-width: 0;
 	table-layout: fixed;
 	width: 100%;
 	max-width: 100%;
