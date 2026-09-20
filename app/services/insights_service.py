@@ -4,6 +4,7 @@ Computes spend summaries, category breakdowns, month-over-month
 comparisons, short-term trends, and plain-language summaries from
 the user's historical transactions. Pure reads, scoped per user.
 """
+import zlib
 from datetime import date, datetime
 
 from sqlalchemy.orm import Session
@@ -11,6 +12,19 @@ from sqlalchemy.orm import Session
 from ..models import Onboarding, Transaction
 
 TREND_MONTHS = 6
+
+_BADGE_PALETTE = (
+    ("#eef2ff", "#4338ca"),
+    ("#ecfdf5", "#047857"),
+    ("#fff7ed", "#c2410c"),
+    ("#fdf2f8", "#be185d"),
+    ("#eff6ff", "#1d4ed8"),
+    ("#f0fdf4", "#15803d"),
+    ("#fefce8", "#a16207"),
+    ("#f5f3ff", "#6d28d9"),
+    ("#ecfeff", "#0e7490"),
+    ("#f1f5f9", "#334155"),
+)
 
 FIN_GRID_TYPES = (
     ("Expenditure", "Expenditure"),
@@ -48,6 +62,13 @@ def _transactions_between(session: Session, user_id, start, end):
     )
 
 
+def _badge_for(name: str) -> dict:
+    """Stable soft color pair (background, foreground) per category name."""
+    index = zlib.crc32(name.encode("utf-8")) % len(_BADGE_PALETTE)
+    background, foreground = _BADGE_PALETTE[index]
+    return {"bg": background, "fg": foreground}
+
+
 def _trend_labels(end_month: str, months: int = TREND_MONTHS) -> list:
     """Month strings (YYYY-MM), oldest first, ending at end_month."""
     labels = []
@@ -72,7 +93,7 @@ def financial_grid_payload(session: Session, user_id, month: str) -> dict:
     window_start = date(int(labels[0][:4]), int(labels[0][5:7]), 1)
     transactions = _transactions_between(session, user_id, window_start, end)
 
-    type_key_by_name = {name.strip().lower(): key for key, name in FIN_GRID_TYPES}
+    type_key_by_name = {key.strip().lower(): key for key, _ in FIN_GRID_TYPES}
     bucket_totals = {}
     items_by_type = {key: [] for key, _ in FIN_GRID_TYPES}
 
@@ -96,6 +117,9 @@ def financial_grid_payload(session: Session, user_id, month: str) -> dict:
                 "subcategory": subcategory,
                 "amount": round(amount, 2),
             })
+
+    for type_key in items_by_type:
+        items_by_type[type_key].sort(key=lambda item: -item["amount"])
 
     cards = []
     for type_key, label in FIN_GRID_TYPES:
@@ -142,11 +166,37 @@ def financial_grid_payload(session: Session, user_id, month: str) -> dict:
             for subcategory in category_subs.get(category, {}):
                 trend[f"{category}|{subcategory}"] = series_for(category=category, subcategory=subcategory)
 
+        card_total = sum(category_totals.values())
+        groups = []
+        for category in sorted(category_totals, key=lambda name: -category_totals[name]):
+            sub_totals = category_subs.get(category, {})
+            subs = []
+            for sub_name in sorted(sub_totals, key=lambda name: -sub_totals[name]):
+                sub_items = [
+                    item
+                    for item in items_by_type[type_key]
+                    if item["category"] == category and item["subcategory"] == sub_name
+                ]
+                subs.append({
+                    "name": sub_name,
+                    "total": round(sub_totals[sub_name], 2),
+                    "items": sub_items,
+                })
+            groups.append({
+                "name": category,
+                "total": round(category_totals[category], 2),
+                "share": round(category_totals[category] / card_total * 100, 1) if card_total else 0.0,
+                "badge": _badge_for(category),
+                "subcategories": subs,
+            })
+
         cards.append({
             "type": type_key,
             "label": label,
+            "total": round(card_total, 2),
             "items": items_by_type[type_key],
             "categories": categories,
+            "groups": groups,
             "trend": trend,
         })
 

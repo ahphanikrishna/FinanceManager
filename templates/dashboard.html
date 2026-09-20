@@ -101,6 +101,10 @@
     <section class="card fin-card" data-fin-type="{{ card.type }}" aria-label="{{ card.label }} card">
         <div class="fin-card-header">
             <h3>{{ card.label }}</h3>
+            <div class="fin-card-actions">
+                <button type="button" class="btn btn-sm" data-fin-action="all">Select All</button>
+                <button type="button" class="btn btn-sm" data-fin-action="none">Select None</button>
+            </div>
         </div>
 
         <div class="fin-card-total">
@@ -109,22 +113,44 @@
             <span class="fin-total-count" data-fin-count></span>
         </div>
 
-        <div class="fin-card-actions">
-            <button type="button" class="btn btn-sm" data-fin-action="all">Select All</button>
-            <button type="button" class="btn btn-sm" data-fin-action="none">Select None</button>
-        </div>
-
-        <ul class="fin-items">
-            {% for item in card["items"] %}
-            <li class="fin-item" data-amount="{{ '%.2f'|format(item.amount) }}">
-                <label class="fin-item-label">
-                    <input type="checkbox" class="fin-item-check" checked>
-                    <span class="fin-item-main">
-                        <span class="fin-item-desc">{{ item.category }}</span>
-                        {% if item.subcategory %}<span class="fin-item-meta">{{ item.subcategory }}</span>{% endif %}
-                    </span>
-                    <span class="fin-item-amount">₹{{ item.amount|inr }}</span>
-                </label>
+        <ul class="fin-groups">
+            {% for group in card["groups"] %}
+            <li class="fin-group">
+                <div class="fin-group-header">
+                    <label class="fin-group-check">
+                        <input type="checkbox" class="fin-group-toggle" checked>
+                        <span class="fin-badge" style="background: {{ group.badge.bg }}; color: {{ group.badge.fg }};">{{ group.name }}</span>
+                    </label>
+                    <span class="fin-group-total">₹{{ group.total|inr }}</span>
+                </div>
+                <div class="fin-group-bar" aria-hidden="true">
+                    <span style="width: {{ group.share }}%"></span>
+                </div>
+                <ul class="fin-subs">
+                    {% for sub in group.subcategories %}
+                    <li class="fin-sub">
+                        {% if sub.name %}
+                        <div class="fin-sub-header">
+                            <label class="fin-sub-check">
+                                <input type="checkbox" class="fin-sub-toggle" checked>
+                                <span class="fin-sub-name">{{ sub.name }}</span>
+                            </label>
+                            <span class="fin-sub-total">₹{{ sub.total|inr }}</span>
+                        </div>
+                        {% endif %}
+                        <ul class="fin-items">
+                            {% for item in sub["items"] %}
+                            <li class="fin-item" data-amount="{{ '%.2f'|format(item.amount) }}">
+                                <label class="fin-item-label">
+                                    <input type="checkbox" class="fin-item-check" checked>
+                                    <span class="fin-item-amount">₹{{ item.amount|inr }}</span>
+                                </label>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endfor %}
+                </ul>
             </li>
             {% else %}
             <li class="fin-empty empty-state">No {{ card.label|lower }} items in {{ selected_month }} yet.</li>

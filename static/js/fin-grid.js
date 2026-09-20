@@ -1,5 +1,5 @@
-/* Dashboard 2x2 financial grid: item selection with dynamic sum
-   recalculation and per-card monthly trend charts.
+/* Dashboard 2x2 financial grid: grouped category/subcategory selection with
+   dynamic sum recalculation and per-card monthly trend charts.
    Selection is client-side only; no page refreshes. */
 (function () {
   'use strict';
@@ -35,13 +35,19 @@
     return String(value);
   }
 
+  function forEachIn(scope, selector, fn) {
+    Array.prototype.forEach.call(scope.querySelectorAll(selector), fn);
+  }
+
   var cards = document.querySelectorAll('.fin-card');
   Array.prototype.forEach.call(cards, function (card) {
     var type = card.getAttribute('data-fin-type');
-    var items = Array.prototype.slice.call(card.querySelectorAll('.fin-item'));
     var totalEl = card.querySelector('[data-fin-total]');
     var countEl = card.querySelector('[data-fin-count]');
     var canvas = card.querySelector('.fin-trend');
+    var itemChecks = Array.prototype.slice.call(card.querySelectorAll('.fin-item-check'));
+    var subToggles = Array.prototype.slice.call(card.querySelectorAll('.fin-sub-toggle'));
+    var groupToggles = Array.prototype.slice.call(card.querySelectorAll('.fin-group-toggle'));
 
     var cardData = (data.cards || []).find(function (entry) { return entry.type === type; });
     var allSeries = (cardData && cardData.trend && cardData.trend['All'])
@@ -50,17 +56,34 @@
     function recalc() {
       var sum = 0;
       var count = 0;
-      items.forEach(function (li) {
-        var check = li.querySelector('.fin-item-check');
+      itemChecks.forEach(function (check) {
         if (check.checked) {
-          sum += Number(li.getAttribute('data-amount') || 0);
+          sum += Number(check.closest('.fin-item').getAttribute('data-amount') || 0);
           count += 1;
         }
       });
       totalEl.textContent = formatMoney(sum);
-      countEl.textContent = items.length
-        ? count + ' of ' + items.length + ' selected'
+      countEl.textContent = itemChecks.length
+        ? count + ' of ' + itemChecks.length + ' selected'
         : 'No items this month';
+
+      subToggles.forEach(function (toggle) {
+        syncToggle(toggle, toggle.closest('.fin-sub'));
+      });
+      groupToggles.forEach(function (toggle) {
+        syncToggle(toggle, toggle.closest('.fin-group'));
+      });
+    }
+
+    function syncToggle(toggle, scope) {
+      var checks = Array.prototype.slice.call(scope.querySelectorAll('.fin-item-check'));
+      var on = checks.filter(function (check) { return check.checked; }).length;
+      toggle.checked = checks.length > 0 && on === checks.length;
+      toggle.indeterminate = on > 0 && on < checks.length;
+    }
+
+    function setChecked(scope, selector, checked) {
+      forEachIn(scope, selector, function (check) { check.checked = checked; });
     }
 
     if (typeof window.Chart !== 'undefined' && canvas) {
@@ -101,17 +124,29 @@
       });
     }
 
-    Array.prototype.forEach.call(card.querySelectorAll('[data-fin-action]'), function (button) {
-      button.addEventListener('click', function () {
-        var checked = button.getAttribute('data-fin-action') === 'all';
-        items.forEach(function (li) {
-          li.querySelector('.fin-item-check').checked = checked;
-        });
+    subToggles.forEach(function (toggle) {
+      toggle.addEventListener('change', function () {
+        setChecked(toggle.closest('.fin-sub'), '.fin-item-check', toggle.checked);
         recalc();
       });
     });
 
-    Array.prototype.forEach.call(card.querySelectorAll('.fin-item-check'), function (check) {
+    groupToggles.forEach(function (toggle) {
+      toggle.addEventListener('change', function () {
+        setChecked(toggle.closest('.fin-group'), '.fin-item-check', toggle.checked);
+        recalc();
+      });
+    });
+
+    forEachIn(card, '[data-fin-action]', function (button) {
+      button.addEventListener('click', function () {
+        var checked = button.getAttribute('data-fin-action') === 'all';
+        setChecked(card, '.fin-item-check', checked);
+        recalc();
+      });
+    });
+
+    itemChecks.forEach(function (check) {
       check.addEventListener('change', recalc);
     });
 

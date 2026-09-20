@@ -46,7 +46,9 @@ def dashboard():
     for transaction in transactions:
         total_key = total_by_type.get((transaction.type or '').strip().lower())
         if total_key:
-            totals[total_key] += transaction.amount or 0.0
+            # Absolute values: metric cards summarize magnitude, matching the
+            # 2x2 grid cards (signed nets would render as negative totals).
+            totals[total_key] += abs(transaction.amount or 0.0)
 
     session = repository.get_session()
     try:

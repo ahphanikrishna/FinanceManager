@@ -1,3 +1,4 @@
+import re
 import uuid
 
 import unittest
@@ -366,7 +367,7 @@ class TestDisplayConventions(LoggedInTestCase):
 
 
 class TestFinGrid(LoggedInTestCase):
-    """The dashboard 2x2 grid replaces the balances overview."""
+    """The dashboard 2x2 grid: grouped, sorted, populated for every type."""
 
     def setUp(self):
         super().setUp()
@@ -375,18 +376,21 @@ class TestFinGrid(LoggedInTestCase):
         today = date.today()
         self.cur_month = today.strftime("%Y-%m")
         day = today.replace(day=15)
-        seed = [
-            ("Expenditure", "Groceries", "Online", "Grocery app order", -250.50),
-            ("Expenditure", "Groceries", "Online", "Second grocery order", -80.25),
-            ("Expenditure", "Groceries", "Fresh", "Market purchase", -120.00),
+        self.seed = [
             ("Expenditure", "Transport", "Refuel", "Petrol", -450.00),
+            ("Expenditure", "Groceries", "Online", "Grocery app order", -250.50),
+            ("Expenditure", "Groceries", "Fresh", "Market purchase", -120.00),
+            ("Expenditure", "Groceries", "Online", "Second grocery order", -80.25),
             ("Income", "Salary", "Monthly", "Monthly salary", 50000.00),
-            ("Investment", "Mutual Fund", "SIP", "SIP debit", -1500.00),
-            ("Transfer", "Between accounts", "", "To savings", -2000.00),
+            ("Investment", "Assets", "Mutual Fund", "MF SIP", -3000.00),
+            ("Investment", "Assets", "Gold", "Gold purchase", -2000.00),
+            ("Investment", "Fixed Deposit", "", "FD booking", -2500.00),
+            ("Transfer", "Transfers", "From Others", "Inbound", 15000.00),
+            ("Transfer", "Transfers", "To Others", "Outbound", -10000.00),
         ]
         session = DatabaseRepository().get_session()
         try:
-            for tx_type, category, subcategory, description, amount in seed:
+            for tx_type, category, subcategory, description, amount in self.seed:
                 session.add(Transaction(
                     date=day,
                     member="SMOKE MEMBER",
@@ -405,29 +409,77 @@ class TestFinGrid(LoggedInTestCase):
         finally:
             session.close()
 
-    def test_grid_replaces_balances_overview(self):
-        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+    def _body(self):
+        return self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+
+    def _card_html(self, body, fin_type):
+        match = re.search(
+            f'<section class="card fin-card" data-fin-type="{fin_type}".*?</section>',
+            body, re.S,
+        )
+        self.assertIsNotNone(match, f"missing {fin_type} card")
+        return match.group(0)
+
+    def test_investment_and_transfer_cards_render_items(self):
+        # Regression: investments/transfers used to show totals but blank lists.
+        body = self._body()
+        for fin_type, marker in (
+            ("Investment", 'data-amount="3000.00"'),
+            ("Transfer", 'data-amount="15000.00"'),
+            ("Expenditure", 'data-amount="450.00"'),
+            ("Income", 'data-amount="50000.00"'),
+        ):
+            card = self._card_html(body, fin_type)
+            self.assertIn("fin-item-check", card, f"{fin_type} card has no selectable items")
+            self.assertIn(marker, card)
+
+    def test_grouped_hierarchy_and_polish_elements(self):
+        body = self._body()
         self.assertNotIn("Monthly Balances Overview", body)
+        self.assertNotIn("fin-category-select", body)
         for fin_type in ("Expenditure", "Income", "Investment", "Transfer"):
             self.assertIn(f'data-fin-type="{fin_type}"', body)
+        # Grouped category -> subcategory hierarchy with badges and progress bars.
+        for marker in ("fin-groups", "fin-group-toggle", "fin-subs", "fin-sub-toggle",
+                       "fin-badge", "fin-group-bar", 'data-fin-action="all"', 'data-fin-action="none"'):
+            self.assertIn(marker, body)
+        # Subcategory with an empty name (Fixed Deposit) still renders its items.
+        fd_card = self._card_html(body, "Investment")
+        self.assertIn("Fixed Deposit", fd_card)
+        self.assertIn('data-amount="2500.00"', fd_card)
 
-    def test_grid_cards_have_selection_controls_and_items(self):
-        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
-        self.assertIn('data-fin-action="all"', body)
-        self.assertIn('data-fin-action="none"', body)
-        self.assertIn('class="fin-item-check"', body)
-        # No category dropdown; items show only category, subcategory, amount.
-        self.assertNotIn('fin-category-select', body)
-        self.assertIn('<span class="fin-item-desc">Groceries</span>', body)
-        self.assertIn('<span class="fin-item-meta">Online</span>', body)
-        # Item amounts render comma-grouped.
-        self.assertIn("\u20b9250.50", body)
+    def test_descending_sort_orders(self):
+        body = self._body()
+        exp = self._card_html(body, "Expenditure")
+        # Categories: Groceries (450.75) before Transport (450.00).
+        self.assertLess(exp.index(">Groceries<"), exp.index(">Transport<"))
+        # Subcategories: Online (330.75) before Fresh (120.00).
+        self.assertLess(exp.index(">Online<"), exp.index(">Fresh<"))
+        # Line items: 250.50 before 80.25 inside Online.
+        self.assertLess(exp.index('data-amount="250.50"'), exp.index('data-amount="80.25"'))
+        inv = self._card_html(body, "Investment")
+        # Categories: Assets (5000) before Fixed Deposit (2500); subs: Mutual Fund before Gold.
+        self.assertLess(inv.index(">Assets<"), inv.index(">Fixed Deposit<"))
+        self.assertLess(inv.index(">Mutual Fund<"), inv.index(">Gold<"))
+        trf = self._card_html(body, "Transfer")
+        self.assertLess(trf.index(">From Others<"), trf.index(">To Others<"))
+
+    def test_group_and_card_totals_render(self):
+        body = self._body()
+        exp = self._card_html(body, "Expenditure")
+        self.assertIn("₹450.75", exp)  # Groceries group total
+        self.assertIn("₹330.75", exp)  # Online subcategory total
+        # Metric cards summarize absolute totals, matching the grid cards.
+        self.assertIn("₹900.75", body)   # Expenditure 900.75
+        self.assertIn("₹7,500.00", body)  # Investments 7,500
+        self.assertIn("₹25,000.00", body)  # Transfers 25,000
 
     def test_grid_carries_trend_payload_and_scripts(self):
-        body = self.client.get(f"/dashboard?month={self.cur_month}").get_data(as_text=True)
+        body = self._body()
         self.assertIn('id="fin-grid-data"', body)
         self.assertIn('"labels"', body)
         self.assertIn('"All"', body)
+        self.assertIn('"groups"', body)
         self.assertIn('chart.umd', body)
         self.assertIn('fin-grid.js', body)
 
