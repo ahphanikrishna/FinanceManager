@@ -39,6 +39,7 @@
   }
 
   var chartInits = [];
+  var chartInstances = {};
 
   var cards = document.querySelectorAll('.fin-card');
   Array.prototype.forEach.call(cards, function (card) {
@@ -50,9 +51,25 @@
     var subToggles = Array.prototype.slice.call(card.querySelectorAll('.fin-sub-toggle'));
     var groupToggles = Array.prototype.slice.call(card.querySelectorAll('.fin-group-toggle'));
 
+    var select = document.querySelector('.fin-chart[data-fin-type="' + type + '"] .fin-chart-select');
     var cardData = (data.cards || []).find(function (entry) { return entry.type === type; });
     var allSeries = (cardData && cardData.trend && cardData.trend['All'])
       || data.labels.map(function () { return 0; });
+
+    function seriesFor(key) {
+      return (cardData && cardData.trend && cardData.trend[key]) || allSeries;
+    }
+
+    function labelFor(key) {
+      if (!key || key === 'All') {
+        return card.getAttribute('aria-label') || type;
+      }
+      if (key.indexOf('|') !== -1) {
+        var parts = key.split('|');
+        return parts[0] + ' \u2192 ' + parts[1];
+      }
+      return key;
+    }
 
     function recalc() {
       var sum = 0;
@@ -90,13 +107,14 @@
     chartInits.push(function () {
       if (typeof window.Chart === 'undefined' || !canvas) return;
       var color = COLORS[type] || '#6366f1';
-      new Chart(canvas, {
+      var key = select ? select.value : 'All';
+      chartInstances[type] = new Chart(canvas, {
         type: 'line',
         data: {
           labels: data.labels,
           datasets: [{
-            label: card.getAttribute('aria-label') || type,
-            data: allSeries,
+            label: labelFor(key),
+            data: seriesFor(key),
             borderColor: color,
             backgroundColor: color + '1f',
             fill: true,
@@ -169,6 +187,17 @@
     itemChecks.forEach(function (check) {
       check.addEventListener('change', recalc);
     });
+
+    if (select) {
+      select.addEventListener('change', function () {
+        var chart = chartInstances[type];
+        if (chart) {
+          chart.data.datasets[0].data = seriesFor(select.value);
+          chart.data.datasets[0].label = labelFor(select.value);
+          chart.update();
+        }
+      });
+    }
 
     recalc();
   });

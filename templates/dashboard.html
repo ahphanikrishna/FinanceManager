@@ -181,6 +181,19 @@
         {% for card in fin_grid.cards %}
         <div class="fin-chart" data-fin-type="{{ card.type }}">
             <h4>{{ card.label }}</h4>
+            <select class="fin-chart-select" aria-label="{{ card.label }} trend series">
+                <option value="All" selected>All</option>
+                {% for category in card.categories %}
+                <optgroup label="{{ category.name }}">
+                    <option value="{{ category.name }}">{{ category.name }}</option>
+                    {% for sub in category.subcategories %}
+                    {% if sub.name %}
+                    <option value="{{ category.name }}|{{ sub.name }}">{{ sub.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
             <div class="fin-trend-canvas-holder">
                 <canvas class="fin-trend"></canvas>
             </div>

@@ -4,7 +4,7 @@
 .badge-auto { background-color: #c3dafe; color: #2b6cb0; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
 
 .transactions-shell {
-	width: min(85vw, 1600px);
+	width: min(97vw, 2000px);
 	max-width: 100%;
 	margin: 0 auto;
 }
@@ -196,9 +196,9 @@
 .section-heading { align-items: baseline; display: flex; justify-content: space-between; }
 .section-heading h3 { margin-top: 0; }
 .section-heading p { color: var(--muted-text); }
-.table-scroll { overflow: visible; width: 100%; }
+.table-scroll { overflow-x: auto; width: 100%; }
 #transactions-table {
-	min-width: 0;
+	min-width: 1500px;
 	table-layout: fixed;
 	width: 100%;
 	max-width: 100%;
@@ -222,16 +222,16 @@
 	line-height: 1.45;
 	color: #1e293b;
 }
-#transactions-table th:nth-child(1), #transactions-table td:nth-child(1) { width: 9%; }
-#transactions-table th:nth-child(2), #transactions-table td:nth-child(2) { width: 10%; }
-#transactions-table th:nth-child(3), #transactions-table td:nth-child(3) { width: 12%; }
-#transactions-table th:nth-child(4), #transactions-table td:nth-child(4) { width: 24%; min-width: 220px; }
+#transactions-table th:nth-child(1), #transactions-table td:nth-child(1) { width: 7%; }
+#transactions-table th:nth-child(2), #transactions-table td:nth-child(2) { width: 9%; }
+#transactions-table th:nth-child(3), #transactions-table td:nth-child(3) { width: 11%; }
+#transactions-table th:nth-child(4), #transactions-table td:nth-child(4) { width: 27%; min-width: 320px; }
 #transactions-table th:nth-child(5), #transactions-table td:nth-child(5) { width: 6%; }
-#transactions-table th:nth-child(6), #transactions-table td:nth-child(6) { width: 18%; }
-#transactions-table th:nth-child(7), #transactions-table td:nth-child(7) { width: 18%; }
-#transactions-table th:nth-child(8), #transactions-table td:nth-child(8) { width: 8%; }
-#transactions-table th:nth-child(9), #transactions-table td:nth-child(9) { width: 10%; }
-#transactions-table th:nth-child(10), #transactions-table td:nth-child(10) { width: 8%; }
+#transactions-table th:nth-child(6), #transactions-table td:nth-child(6) { width: 14%; }
+#transactions-table th:nth-child(7), #transactions-table td:nth-child(7) { width: 14%; }
+#transactions-table th:nth-child(8), #transactions-table td:nth-child(8) { width: 7%; }
+#transactions-table th:nth-child(9), #transactions-table td:nth-child(9) { width: 9%; }
+#transactions-table th:nth-child(10), #transactions-table td:nth-child(10) { width: 10%; }
 .table-filter-row td {
 	background: #f8fafc;
 	padding-top: 0.5rem;

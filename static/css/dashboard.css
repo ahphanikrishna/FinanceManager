@@ -464,6 +464,19 @@
   color: var(--muted-text);
 }
 
+.fin-chart-select {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.4rem 0.55rem;
+  margin: 0 0 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: #fff;
+  font-size: 0.8rem;
+  color: var(--text-color);
+  text-align: left;
+}
+
 .fin-trend-canvas-holder { position: relative; height: 180px; }
 
 .fin-trend { display: block; }

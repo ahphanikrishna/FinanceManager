@@ -107,6 +107,35 @@ class TestPageRendering(LoggedInTestCase):
         self.assertIn("/settings", response.headers.get("Location", ""))
 
 
+class TestProfileSettings(LoggedInTestCase):
+    """Profile email is the login identifier (besides username)."""
+
+    def test_profile_tab_renders(self):
+        response = self.client.get("/settings?tab=profile")
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-settings-tab="profile"', body)
+        self.assertIn('id="profile-email"', body)
+
+    def test_save_profile_email_enables_email_login(self):
+        email = f"profile_{uuid.uuid4().hex[:8]}@example.com"
+        response = self.client.post("/settings/profile", data={"email": email}, follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        session = DatabaseRepository().get_session()
+        try:
+            user = session.get(User, self.user_id)
+            self.assertEqual(user.email, email)
+        finally:
+            session.close()
+        self.client.get("/logout")
+        response = self.client.post(
+            "/login",
+            data={"username": email, "password": "SmokeTest123!"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302, "login by saved profile email should succeed")
+
+
 class TestInsights(LoggedInTestCase):
     """Smoke tests for monthly spend insights (service -> API + dashboard)."""
 
@@ -516,6 +545,24 @@ class TestFinGrid(LoggedInTestCase):
         for name in ("insights", "grid", "graphs"):
             self.assertIn(f'data-dash-tab="{name}"', body)
             self.assertIn(f'data-dash-panel="{name}"', body)
+
+    def test_graph_dropdowns_offer_category_series(self):
+        body = self._body()
+        self.assertEqual(body.count('class="fin-chart-select"'), 4)
+        exp_chart = re.search(
+            r'<div class="fin-chart" data-fin-type="Expenditure">.*?</select>', body, re.S
+        )
+        self.assertIsNotNone(exp_chart)
+        self.assertIn('<option value="All" selected>All</option>', exp_chart.group(0))
+        self.assertIn('<option value="Groceries">', exp_chart.group(0))
+        self.assertIn('<option value="Groceries|Online">', exp_chart.group(0))
+        self.assertIn('<option value="Groceries|Fresh">', exp_chart.group(0))
+        self.assertIn('<option value="Transport">', exp_chart.group(0))
+        trf_chart = re.search(
+            r'<div class="fin-chart" data-fin-type="Transfer">.*?</select>', body, re.S
+        )
+        self.assertIn('<option value="Transfers|To Others">', trf_chart.group(0))
+        self.assertIn('<option value="Transfers|From Others">', trf_chart.group(0))
 
     def test_charts_separate_section_and_collapsed_defaults(self):
         body = self._body()

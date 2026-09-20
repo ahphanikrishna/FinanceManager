@@ -29,7 +29,7 @@ def settings():
     session = repository.get_session()
     try:
         active_tab = request.args.get("tab", "members")
-        if active_tab not in _ENTITY_CONFIG and active_tab != "gmail":
+        if active_tab not in _ENTITY_CONFIG and active_tab not in ("gmail", "profile"):
             active_tab = "members"
         categories = _get_entities(session, Category)
         category_types = ("Expenditure", "Income", "Investment", "Transfer")
@@ -57,6 +57,7 @@ def settings():
             members=_get_entities(session, Member),
             active_tab=active_tab,
             gmail=_gmail_state(session),
+            profile={"username": current_user.username, "email": current_user.email},
         )
     finally:
         session.close()
@@ -78,6 +79,36 @@ def _gmail_state(session):
         "last_sync": current_user.last_gmail_sync_at,
         "month": _default_month(),
     }
+
+
+@settings_bp.route("/settings/profile", methods=["POST"])
+@login_required
+def save_profile_email():
+    email = request.form.get("email", "").strip().lower() or None
+    if email and not gmail_service.VALID_EMAIL_RE.match(email):
+        flash("That does not look like a valid email address.", "error")
+        return redirect(url_for("settings.settings", tab="profile"))
+
+    session = DatabaseRepository().get_session()
+    try:
+        conflict = (
+            session.query(User).filter(User.id != current_user.id, User.email == email).first()
+            if email
+            else None
+        )
+        if conflict is not None:
+            flash("That email is already in use by another account.", "error")
+        else:
+            user = session.get(User, current_user.id)
+            user.email = email
+            session.commit()
+            flash("Profile saved. You can now log in with that email.", "success")
+    except SQLAlchemyError:
+        session.rollback()
+        flash("Could not save the profile.", "error")
+    finally:
+        session.close()
+    return redirect(url_for("settings.settings", tab="profile"))
 
 
 @settings_bp.route("/settings/gmail", methods=["POST"])
