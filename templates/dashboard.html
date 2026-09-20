@@ -38,6 +38,13 @@
     </div>
 </div>
 
+<div class="dash-tabs" role="tablist" aria-label="Dashboard sections">
+    <button type="button" class="dash-tab active" data-dash-tab="insights" role="tab" aria-selected="true">Insights</button>
+    <button type="button" class="dash-tab" data-dash-tab="grid" role="tab" aria-selected="false">Financial Breakdown</button>
+    <button type="button" class="dash-tab" data-dash-tab="graphs" role="tab" aria-selected="false">Trend Graphs</button>
+</div>
+
+<section class="dash-panel" data-dash-panel="insights" role="tabpanel">
 <div class="card insights-card">
     <h3>Insights</h3>
     <p class="insights-summary">{{ insights.summary_text }}</p>
@@ -95,7 +102,9 @@
     </div>
     {% endif %}
 </div>
+</section>
 
+<section class="dash-panel" data-dash-panel="grid" hidden role="tabpanel">
 <div class="fin-grid" role="group" aria-label="Monthly financial breakdown">
     {% for card in fin_grid.cards %}
     <section class="card fin-card" data-fin-type="{{ card.type }}" aria-label="{{ card.label }} card">
@@ -129,9 +138,10 @@
                 </div>
                 <ul class="fin-subs">
                     {% for sub in group.subcategories %}
-                    <li class="fin-sub">
+                    <li class="fin-sub collapsed">
                         {% if sub.name %}
                         <div class="fin-sub-header">
+                            <button type="button" class="fin-sub-collapse" aria-expanded="false" title="Expand subcategory"></button>
                             <label class="fin-sub-check">
                                 <input type="checkbox" class="fin-sub-toggle" checked>
                                 <span class="fin-sub-name">{{ sub.name }}</span>
@@ -144,6 +154,7 @@
                             <li class="fin-item" data-amount="{{ '%.2f'|format(item.amount) }}">
                                 <label class="fin-item-label">
                                     <input type="checkbox" class="fin-item-check" checked>
+                                    <span class="fin-item-desc">{{ item.description }}</span>
                                     <span class="fin-item-amount">₹{{ item.amount|inr }}</span>
                                 </label>
                             </li>
@@ -161,7 +172,9 @@
     </section>
     {% endfor %}
 </div>
+</section>
 
+<section class="dash-panel" data-dash-panel="graphs" hidden role="tabpanel">
 <section class="card fin-charts" aria-label="Monthly trend charts">
     <h3>Monthly trends ({{ fin_grid.labels|length }} months)</h3>
     <div class="fin-chart-grid">
@@ -174,6 +187,7 @@
         </div>
         {% endfor %}
     </div>
+</section>
 </section>
 
 <script id="fin-grid-data" type="application/json">{{ fin_grid | tojson }}</script>

@@ -442,14 +442,21 @@ class TestFinGrid(LoggedInTestCase):
         # Grouped category -> subcategory hierarchy with badges and progress bars.
         for marker in ("fin-groups", "fin-group-toggle", "fin-subs", "fin-sub-toggle",
                        "fin-badge", "fin-group-bar", "fin-collapse-toggle",
+                       "fin-sub-collapse", "fin-item-desc",
                        'data-fin-action="all"', 'data-fin-action="none"'):
             self.assertIn(marker, body)
-        # One collapse toggle per category group.
+        # One collapse toggle per category group and per named subcategory.
         exp = self._card_html(body, "Expenditure")
         self.assertEqual(
             exp.count('class="fin-collapse-toggle"'),
             exp.count('class="fin-group collapsed"'),
         )
+        self.assertEqual(
+            exp.count('class="fin-sub-collapse"'),
+            exp.count('class="fin-sub-header"'),
+        )
+        # Final line items show the transaction description.
+        self.assertIn("Market purchase", exp)
         # Subcategory with an empty name (Fixed Deposit) still renders its items.
         fd_card = self._card_html(body, "Investment")
         self.assertIn("Fixed Deposit", fd_card)
@@ -502,13 +509,25 @@ class TestFinGrid(LoggedInTestCase):
         self.assertIn('chart.umd', body)
         self.assertIn('fin-grid.js', body)
 
+    def test_dashboard_tabs(self):
+        body = self._body()
+        self.assertIn('class="dash-tabs"', body)
+        self.assertIn('role="tab"', body)
+        for name in ("insights", "grid", "graphs"):
+            self.assertIn(f'data-dash-tab="{name}"', body)
+            self.assertIn(f'data-dash-panel="{name}"', body)
+
     def test_charts_separate_section_and_collapsed_defaults(self):
         body = self._body()
-        # Categories render collapsed by default.
+        # Categories and subcategories render collapsed by default.
         exp = self._card_html(body, "Expenditure")
         self.assertEqual(
             exp.count('class="fin-group collapsed"'),
             exp.count('class="fin-group-header"'),
+        )
+        self.assertEqual(
+            exp.count('class="fin-sub collapsed"'),
+            exp.count('class="fin-sub-header"'),
         )
         self.assertIn('aria-expanded="false"', exp)
         # Charts live in their own section, not inside the 2x2 cards.

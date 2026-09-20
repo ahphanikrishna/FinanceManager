@@ -41,6 +41,38 @@
   .dashboard-filter { flex-wrap: wrap; }
 }
 
+/* --- dashboard tabs --- */
+.dash-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dash-tab {
+  border: 0;
+  background: transparent;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted-text);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  text-align: left;
+}
+
+.dash-tab:hover { color: var(--text-color); }
+
+.dash-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.dash-panel { margin-bottom: 1.5rem; }
+
+.dash-panel[hidden] { display: none; }
+
 .insights-card .insights-summary {
   font-size: 1rem;
   line-height: 1.55;
@@ -151,7 +183,7 @@
 .fin-card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
@@ -208,7 +240,7 @@
 .fin-group-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
@@ -300,8 +332,45 @@
 .fin-sub-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fin-sub-collapse {
+  position: relative;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.fin-sub-collapse::before {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.25rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid var(--muted-text);
+  border-bottom: 2px solid var(--muted-text);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.fin-sub-collapse:hover::before {
+  border-color: var(--primary-color);
+}
+
+.fin-sub.collapsed .fin-sub-collapse::before {
+  transform: rotate(-45deg);
+}
+
+.fin-sub.collapsed .fin-items {
+  display: none;
 }
 
 .fin-sub-check {
@@ -339,12 +408,24 @@
 .fin-item-label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
   padding: 0.32rem 0.5rem;
   cursor: pointer;
   border-radius: 0.45rem;
 }
+
+.fin-item-desc {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  color: var(--text-color);
+}
+
+.fin-item-amount { flex-shrink: 0; }
 
 .fin-item-label:hover { background: var(--soft-blue); }
 

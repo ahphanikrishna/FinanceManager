@@ -1,13 +1,11 @@
-/* Dashboard 2x2 financial grid: grouped category/subcategory selection with
-   dynamic sum recalculation and per-card monthly trend charts.
-   Selection is client-side only; no page refreshes. */
+/* Dashboard tabs, 2x2 financial grid grouped selection with dynamic sum
+   recalculation, and per-card monthly trend charts. All client-side; no
+   page refreshes. */
 (function () {
   'use strict';
 
-  var grid = document.querySelector('.fin-grid');
-  if (!grid) return;
-
   var dataEl = document.getElementById('fin-grid-data');
+  if (!dataEl) return;
   var data = null;
   try {
     data = JSON.parse(dataEl.textContent);
@@ -39,6 +37,8 @@
   function forEachIn(scope, selector, fn) {
     Array.prototype.forEach.call(scope.querySelectorAll(selector), fn);
   }
+
+  var chartInits = [];
 
   var cards = document.querySelectorAll('.fin-card');
   Array.prototype.forEach.call(cards, function (card) {
@@ -87,7 +87,8 @@
       forEachIn(scope, selector, function (check) { check.checked = checked; });
     }
 
-    if (typeof window.Chart !== 'undefined' && canvas) {
+    chartInits.push(function () {
+      if (typeof window.Chart === 'undefined' || !canvas) return;
       var color = COLORS[type] || '#6366f1';
       new Chart(canvas, {
         type: 'line',
@@ -123,7 +124,7 @@
           }
         }
       });
-    }
+    });
 
     subToggles.forEach(function (toggle) {
       toggle.addEventListener('change', function () {
@@ -139,14 +140,6 @@
       });
     });
 
-    forEachIn(card, '[data-fin-action]', function (button) {
-      button.addEventListener('click', function () {
-        var checked = button.getAttribute('data-fin-action') === 'all';
-        setChecked(card, '.fin-item-check', checked);
-        recalc();
-      });
-    });
-
     forEachIn(card, '.fin-collapse-toggle', function (button) {
       button.addEventListener('click', function () {
         var group = button.closest('.fin-group');
@@ -156,10 +149,62 @@
       });
     });
 
+    forEachIn(card, '.fin-sub-collapse', function (button) {
+      button.addEventListener('click', function () {
+        var sub = button.closest('.fin-sub');
+        var collapsed = sub.classList.toggle('collapsed');
+        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        button.title = collapsed ? 'Expand subcategory' : 'Collapse subcategory';
+      });
+    });
+
+    forEachIn(card, '[data-fin-action]', function (button) {
+      button.addEventListener('click', function () {
+        var checked = button.getAttribute('data-fin-action') === 'all';
+        setChecked(card, '.fin-item-check', checked);
+        recalc();
+      });
+    });
+
     itemChecks.forEach(function (check) {
       check.addEventListener('change', recalc);
     });
 
     recalc();
   });
+
+  // Charts are created lazily so the canvas has real dimensions the first
+  // time the graphs tab is shown.
+  var chartsReady = false;
+  function initCharts() {
+    if (chartsReady) return;
+    chartsReady = true;
+    chartInits.forEach(function (init) { init(); });
+  }
+
+  var tabButtons = Array.prototype.slice.call(document.querySelectorAll('.dash-tab'));
+  if (tabButtons.length) {
+    function activateTab(name) {
+      tabButtons.forEach(function (btn) {
+        var on = btn.getAttribute('data-dash-tab') === name;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('.dash-panel'), function (panel) {
+        panel.hidden = panel.getAttribute('data-dash-panel') !== name;
+      });
+      if (name === 'graphs') initCharts();
+    }
+    tabButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activateTab(btn.getAttribute('data-dash-tab'));
+      });
+    });
+    var defaultBtn = tabButtons.filter(function (btn) {
+      return btn.classList.contains('active');
+    })[0];
+    activateTab(defaultBtn ? defaultBtn.getAttribute('data-dash-tab') : 'insights');
+  } else {
+    initCharts();
+  }
 })();
