@@ -448,7 +448,7 @@ class TestFinGrid(LoggedInTestCase):
         exp = self._card_html(body, "Expenditure")
         self.assertEqual(
             exp.count('class="fin-collapse-toggle"'),
-            exp.count('class="fin-group"'),
+            exp.count('class="fin-group collapsed"'),
         )
         # Subcategory with an empty name (Fixed Deposit) still renders its items.
         fd_card = self._card_html(body, "Investment")
@@ -489,6 +489,25 @@ class TestFinGrid(LoggedInTestCase):
         self.assertIn('"groups"', body)
         self.assertIn('chart.umd', body)
         self.assertIn('fin-grid.js', body)
+
+    def test_charts_separate_section_and_collapsed_defaults(self):
+        body = self._body()
+        # Categories render collapsed by default.
+        exp = self._card_html(body, "Expenditure")
+        self.assertEqual(
+            exp.count('class="fin-group collapsed"'),
+            exp.count('class="fin-group-header"'),
+        )
+        self.assertIn('aria-expanded="false"', exp)
+        # Charts live in their own section, not inside the 2x2 cards.
+        self.assertIn('fin-chart-grid', body)
+        self.assertEqual(body.count('<canvas'), 4)
+        for fin_type in ("Expenditure", "Income", "Investment", "Transfer"):
+            self.assertNotIn('<canvas', self._card_html(body, fin_type))
+        charts = re.search(r'<section class="card fin-charts".*?</section>', body, re.S)
+        self.assertIsNotNone(charts)
+        for fin_type in ("Expenditure", "Income", "Investment", "Transfer"):
+            self.assertIn(f'data-fin-type="{fin_type}"', charts.group(0))
 
 
 class TestOnboardingFlow(LoggedInTestCase):

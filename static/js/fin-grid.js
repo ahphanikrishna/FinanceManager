@@ -45,7 +45,7 @@
     var type = card.getAttribute('data-fin-type');
     var totalEl = card.querySelector('[data-fin-total]');
     var countEl = card.querySelector('[data-fin-count]');
-    var canvas = card.querySelector('.fin-trend');
+    var canvas = document.querySelector('.fin-chart[data-fin-type="' + type + '"] .fin-trend');
     var itemChecks = Array.prototype.slice.call(card.querySelectorAll('.fin-item-check'));
     var subToggles = Array.prototype.slice.call(card.querySelectorAll('.fin-sub-toggle'));
     var groupToggles = Array.prototype.slice.call(card.querySelectorAll('.fin-group-toggle'));

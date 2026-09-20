@@ -115,9 +115,9 @@
 
         <ul class="fin-groups">
             {% for group in card["groups"] %}
-            <li class="fin-group">
+            <li class="fin-group collapsed">
                 <div class="fin-group-header">
-                    <button type="button" class="fin-collapse-toggle" aria-expanded="true" title="Collapse category"></button>
+                    <button type="button" class="fin-collapse-toggle" aria-expanded="false" title="Expand category"></button>
                     <label class="fin-group-check">
                         <input type="checkbox" class="fin-group-toggle" checked>
                         <span class="fin-badge" style="background: {{ group.badge.bg }}; color: {{ group.badge.fg }};">{{ group.name }}</span>
@@ -158,15 +158,23 @@
             {% endfor %}
         </ul>
 
-        <div class="fin-trend-wrap">
-            <h4>Category trend ({{ fin_grid.labels|length }} months)</h4>
+    </section>
+    {% endfor %}
+</div>
+
+<section class="card fin-charts" aria-label="Monthly trend charts">
+    <h3>Monthly trends ({{ fin_grid.labels|length }} months)</h3>
+    <div class="fin-chart-grid">
+        {% for card in fin_grid.cards %}
+        <div class="fin-chart" data-fin-type="{{ card.type }}">
+            <h4>{{ card.label }}</h4>
             <div class="fin-trend-canvas-holder">
                 <canvas class="fin-trend"></canvas>
             </div>
         </div>
-    </section>
-    {% endfor %}
-</div>
+        {% endfor %}
+    </div>
+</section>
 
 <script id="fin-grid-data" type="application/json">{{ fin_grid | tojson }}</script>
 {% endblock %}

@@ -143,7 +143,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
-  margin: 1.25rem 0 2rem;
+  margin: 1.25rem 0 1.25rem;
 }
 
 .fin-card { display: flex; flex-direction: column; }
@@ -363,10 +363,21 @@
 
 .fin-empty { padding: 1rem 0.75rem; }
 
-/* --- trend --- */
-.fin-trend-wrap { margin-top: 1rem; flex: 1; }
+/* --- trend charts section --- */
+.fin-charts { margin: 0 0 2rem; }
 
-.fin-trend-wrap h4 {
+.fin-charts h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+}
+
+.fin-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.fin-chart h4 {
   margin: 0 0 0.5rem;
   font-size: 0.8rem;
   color: var(--muted-text);
@@ -378,6 +389,7 @@
 
 @media (max-width: 980px) {
   .fin-grid { grid-template-columns: 1fr; }
+  .fin-chart-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
