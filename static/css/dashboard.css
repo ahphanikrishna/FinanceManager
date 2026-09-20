@@ -159,17 +159,6 @@
 
 .fin-card-header h3 { margin: 0; }
 
-.fin-category-select {
-  width: auto;
-  max-width: 100%;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 0.6rem;
-  background: white;
-  color: inherit;
-}
-
 .fin-card-total {
   display: flex;
   align-items: baseline;
@@ -205,8 +194,6 @@
 .fin-item { border-bottom: 1px solid rgba(148, 163, 184, 0.15); }
 
 .fin-item:last-child { border-bottom: 0; }
-
-.fin-item[hidden] { display: none; }
 
 .fin-item-label {
   display: flex;

@@ -101,17 +101,6 @@
     <section class="card fin-card" data-fin-type="{{ card.type }}" aria-label="{{ card.label }} card">
         <div class="fin-card-header">
             <h3>{{ card.label }}</h3>
-            <select class="fin-category-select" aria-label="Filter {{ card.label }} by category">
-                <option value="">All categories</option>
-                {% for category in card.categories %}
-                <optgroup label="{{ category.name }}">
-                    <option value="{{ category.name }}">All — {{ category.name }}</option>
-                    {% for sub in category.subcategories %}
-                    <option value="{{ category.name }}|{{ sub.name }}">{{ sub.name }}</option>
-                    {% endfor %}
-                </optgroup>
-                {% endfor %}
-            </select>
         </div>
 
         <div class="fin-card-total">
@@ -127,15 +116,12 @@
 
         <ul class="fin-items">
             {% for item in card["items"] %}
-            <li class="fin-item"
-                data-category="{{ item.category }}"
-                data-subcategory="{{ item.subcategory }}"
-                data-amount="{{ '%.2f'|format(item.amount) }}">
+            <li class="fin-item" data-amount="{{ '%.2f'|format(item.amount) }}">
                 <label class="fin-item-label">
                     <input type="checkbox" class="fin-item-check" checked>
                     <span class="fin-item-main">
-                        <span class="fin-item-desc">{{ item.description }}</span>
-                        <span class="fin-item-meta">{{ item.date }}{% if item.subcategory %} · {{ item.subcategory }}{% endif %}</span>
+                        <span class="fin-item-desc">{{ item.category }}</span>
+                        {% if item.subcategory %}<span class="fin-item-meta">{{ item.subcategory }}</span>{% endif %}
                     </span>
                     <span class="fin-item-amount">₹{{ item.amount|inr }}</span>
                 </label>

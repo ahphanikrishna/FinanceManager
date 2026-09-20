@@ -416,8 +416,10 @@ class TestFinGrid(LoggedInTestCase):
         self.assertIn('data-fin-action="all"', body)
         self.assertIn('data-fin-action="none"', body)
         self.assertIn('class="fin-item-check"', body)
-        self.assertIn('data-subcategory="Online"', body)
-        self.assertIn('value="Groceries|Online"', body)
+        # No category dropdown; items show only category, subcategory, amount.
+        self.assertNotIn('fin-category-select', body)
+        self.assertIn('<span class="fin-item-desc">Groceries</span>', body)
+        self.assertIn('<span class="fin-item-meta">Online</span>', body)
         # Item amounts render comma-grouped.
         self.assertIn("\u20b9250.50", body)
 
