@@ -489,3 +489,19 @@
 @media (max-width: 720px) {
   .fin-card-total { flex-wrap: wrap; }
 }
+
+@media (max-width: 480px) {
+  .metric-card { padding: 1.1rem; }
+  .metric-value { font-size: 1.35rem; }
+  .fin-card { padding: 1rem; }
+  .insight-row,
+  .insight-trend-row {
+    flex-wrap: wrap;
+  }
+  .budget-meter-label { flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+  .dash-tab { padding: 0.55rem 0.6rem; font-size: 0.85rem; }
+}
+
+@media (max-width: 400px) {
+  .metrics-grid { grid-template-columns: 1fr; gap: 1rem; }
+}

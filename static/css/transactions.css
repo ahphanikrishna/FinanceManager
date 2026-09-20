@@ -460,10 +460,22 @@
 	#transactions-table td.classification-cell::before { display: block; margin-bottom: 0.4rem; }
 	.classification-form { width: 100%; }
 	#transactions-table td.empty-state { display: block; text-align: center; }
+	.column-form { flex: 1 1 auto; min-width: 0; }
+	.table-pagination { flex-wrap: wrap; }
 }
 
 @media (max-width: 520px) {
 	.form-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+	#transactions-table td::before {
+		flex: 0 0 6rem;
+		font-size: 0.65rem;
+	}
+	.description-stack { min-width: 0; }
+	.row-action-form { min-width: 0; }
+	#transactions-table tr { padding: 0.6rem; margin-bottom: 0.6rem; }
 }
 
 .suggestion-hint {

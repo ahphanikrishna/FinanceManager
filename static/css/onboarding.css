@@ -128,4 +128,12 @@
   .onboarding-step-label {
     display: none;
   }
+
+  .onboarding-card {
+    padding: 1.25rem;
+  }
+
+  .onboarding-progress {
+    margin: 1rem 0 1.25rem;
+  }
 }

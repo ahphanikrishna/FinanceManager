@@ -188,4 +188,8 @@
   .category-columns {
     grid-template-columns: 1fr;
   }
+
+  .settings-panel {
+    padding: 1.1rem;
+  }
 }
