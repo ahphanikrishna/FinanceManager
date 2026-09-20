@@ -44,11 +44,16 @@ def dashboard():
         'transfer': 'transfers',
     }
     for transaction in transactions:
-        total_key = total_by_type.get((transaction.type or '').strip().lower())
-        if total_key:
-            # Absolute values: metric cards summarize magnitude, matching the
-            # 2x2 grid cards (signed nets would render as negative totals).
-            totals[total_key] += abs(transaction.amount or 0.0)
+        tx_type = (transaction.type or '').strip().lower()
+        total_key = total_by_type.get(tx_type)
+        if not total_key:
+            continue
+        # Transfers keep their sign so to/from others net out in the total;
+        # the other metric cards summarize magnitude.
+        if tx_type == 'transfer':
+            totals[total_key] += float(transaction.amount or 0.0)
+        else:
+            totals[total_key] += abs(float(transaction.amount or 0.0))
 
     session = repository.get_session()
     try:

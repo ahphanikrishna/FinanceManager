@@ -469,6 +469,7 @@ class TestFinGrid(LoggedInTestCase):
         self.assertLess(inv.index(">Assets<"), inv.index(">Fixed Deposit<"))
         self.assertLess(inv.index(">Mutual Fund<"), inv.index(">Gold<"))
         trf = self._card_html(body, "Transfer")
+        # Signed sort: positive From Others before negative To Others.
         self.assertLess(trf.index(">From Others<"), trf.index(">To Others<"))
 
     def test_group_and_card_totals_render(self):
@@ -479,7 +480,18 @@ class TestFinGrid(LoggedInTestCase):
         # Metric cards summarize absolute totals, matching the grid cards.
         self.assertIn("₹900.75", body)   # Expenditure 900.75
         self.assertIn("₹7,500.00", body)  # Investments 7,500
-        self.assertIn("₹25,000.00", body)  # Transfers 25,000
+        self.assertIn("₹5,000.00", body)  # Transfers net 15,000 - 10,000
+
+    def test_transfer_card_keeps_signs_and_nets_out(self):
+        body = self._body()
+        trf = self._card_html(body, "Transfer")
+        # To others is negative, from others is positive.
+        self.assertIn('data-amount="-10000.00"', trf)
+        self.assertIn('data-amount="15000.00"', trf)
+        self.assertIn("₹-10,000.00", trf)  # To Others subcategory total
+        self.assertIn("₹15,000.00", trf)   # From Others subcategory total
+        # Grouped, they mostly cancel out: category total is the net.
+        self.assertIn("₹5,000.00", trf)
 
     def test_grid_carries_trend_payload_and_scripts(self):
         body = self._body()

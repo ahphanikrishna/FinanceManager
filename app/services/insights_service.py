@@ -103,7 +103,9 @@ def financial_grid_payload(session: Session, user_id, month: str) -> dict:
             continue
         category = (tx.category or "").strip() or "Uncategorized"
         subcategory = (tx.subcategory or "").strip()
-        amount = abs(tx.amount or 0.0)
+        # Transfers keep their sign (to others = negative, from others =
+        # positive) so grouped transfers net out; other types are magnitude.
+        amount = float(tx.amount or 0.0) if type_key == "Transfer" else abs(float(tx.amount or 0.0))
         month_str = tx.date.strftime("%Y-%m")
         bucket_totals[(type_key, category, subcategory, month_str)] = (
             bucket_totals.get((type_key, category, subcategory, month_str), 0.0) + amount
@@ -167,6 +169,14 @@ def financial_grid_payload(session: Session, user_id, month: str) -> dict:
                 trend[f"{category}|{subcategory}"] = series_for(category=category, subcategory=subcategory)
 
         card_total = sum(category_totals.values())
+        # Progress bars use magnitude shares so signed nets (transfers) still
+        # render a sensible bar width.
+        category_magnitude = {}
+        for item in items_by_type[type_key]:
+            category_magnitude[item["category"]] = (
+                category_magnitude.get(item["category"], 0.0) + abs(item["amount"])
+            )
+        card_magnitude = sum(category_magnitude.values())
         groups = []
         for category in sorted(category_totals, key=lambda name: -category_totals[name]):
             sub_totals = category_subs.get(category, {})
@@ -185,7 +195,7 @@ def financial_grid_payload(session: Session, user_id, month: str) -> dict:
             groups.append({
                 "name": category,
                 "total": round(category_totals[category], 2),
-                "share": round(category_totals[category] / card_total * 100, 1) if card_total else 0.0,
+                "share": round(category_magnitude.get(category, 0.0) / card_magnitude * 100, 1) if card_magnitude else 0.0,
                 "badge": _badge_for(category),
                 "subcategories": subs,
             })
